@@ -29,10 +29,19 @@ client.on('message', function(message) {
   const mess = message.content.toLowerCase();
   const args = message.content.split(' ').slice(1).join(" ");
 
-  if (mess.startsWith(prefix +"info")) {
-    getinfo()
-  } else if(mess.startsWith(prefix + "champname")) {
-    getchampionID(args)
+  if (mess.startsWith(prefix + "info")) {
+    getinfo();
+  } else if (mess.startsWith(prefix + "champname")) {
+    getchampionID(args, function(err, champid) {
+      if (err) {
+        message.reply(err);
+        //throw(err);
+      } else {
+        message.reply(champid);
+      }
+    });
+  } else if (mess.startsWith(prefix + "bestkennen")) {
+    message.reply("I believe it is Hieverybod from the NA server");
   }
 });
 
@@ -50,21 +59,24 @@ function getinfo() {
       var importedJSON = JSON.parse(body);
       console.log(importedJSON);
     }
-  })
+  });
 }
 
-function getchampionID(championname) {
-  console.log(championname);
+function getchampionID(championname, cb) {
   request(urlchampid, function(error, response, body) {
-    if(error){
-      console.log("error while loading urlchampid link");
-    }
-    else if (!error && response.statusCode == 200) {
+    if (error || response.statusCode == 403) {
+      cb('expired apikey!');
+    } else if (!error && response.statusCode == 200) {
       var importedJSON = JSON.parse(body);
       championname = championname.toLowerCase();
       championname = championname.charAt(0).toUpperCase() + championname.slice(1);
-      var data = importedJSON.data[championname].id;
-      return data;
+      try {
+        var data = importedJSON.data[championname].id;
+      } catch (err) {
+        cb('Type a real champion name!');
+        return;
+      }
+      cb(false, data);
     }
-    })
-  }
+  });
+}
