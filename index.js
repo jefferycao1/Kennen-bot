@@ -31,13 +31,14 @@ client.on('message', function(message) {
 
   if (mess.startsWith(prefix + "info")) {
     getinfo();
-  } else if (mess.startsWith(prefix + "champname")) {
+  } else if (mess.startsWith(prefix + "build")) {
     getchampionID(args, function(err, champid) {
       if (err) {
         message.reply(err);
-        //throw(err);
       } else {
-        message.reply(champid);
+        getbuild(champid, function(err, buildmessage) {
+
+        });
       }
     });
   } else if (mess.startsWith(prefix + "bestkennen")) {
@@ -53,11 +54,27 @@ client.on('ready', function() {
 
 
 
-function getinfo() {
+function getbuild(champid) {
+  console.log(champid);
   request(urlinfo, function(error, response, body) {
-    if (!error && response.statusCode == 200) {
+    if (error || response.statusCode == 403) {
+      cb('invalid champion.gg apikey!');
+      return;
+    } else if (!error && response.statusCode == 200) {
       var importedJSON = JSON.parse(body);
-      console.log(importedJSON);
+      var championobject = {};
+      for (var key in importedJSON) {
+        if (importedJSON[key].championId == champid) {
+          championobject = importedJSON[key];
+          break;
+        }
+      }
+      var finalitemshigh = championobject.hashes.finalitemshashfixed.highestCount;
+      var finalitemswin = championobject.hashes.finalitemshashfixed.highestWinrate;
+      var startingitemshigh = championobject.hashes.firstitemshash.highestCount;
+      var startingitemswin = championobject.hashes.firstitemshash.highestWinrate;
+
+
     }
   });
 }
@@ -66,6 +83,7 @@ function getchampionID(championname, cb) {
   request(urlchampid, function(error, response, body) {
     if (error || response.statusCode == 403) {
       cb('expired apikey!');
+      return;
     } else if (!error && response.statusCode == 200) {
       var importedJSON = JSON.parse(body);
       championname = championname.toLowerCase();
