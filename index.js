@@ -1,12 +1,17 @@
 const fs = require("fs");
+const gm = require('gm');
 const Discord = require("discord.js");
 const client = new Discord.Client();
 const request = require("request");
 const json = require('json-object').setup(global);
+const download = require('image-downloader');
 
 
 var config = JSON.parse(fs.readFileSync('./settings.json', 'utf-8'));
-
+const options = {
+  url: 'http://ddragon.leagueoflegends.com/cdn/6.24.1/img/item/1001.png',
+  dest: 'C:/jeff/Kennen-bot/photos'
+}
 
 
 const discord_token = config.discord_token;
@@ -17,6 +22,7 @@ const lol_api = config.lol_api;
 const urlinfo = "http://api.champion.gg/v2/champions?limit=200&champData=hashes,firstitems,summoners,skills,finalitemshashfixed,masterieshash&api_key=" + champion_gg_token;
 const urlchampid = "https://na1.api.riotgames.com/lol/static-data/v3/champions?locale=en_US&dataById=false&api_key=" + lol_api;
 const urlitems = "https://na1.api.riotgames.com/lol/static-data/v3/items?locale=en_US&api_key=" + lol_api;
+const urlitempicture = "http://ddragon.leagueoflegends.com/cdn/6.24.1/img/item/";
 
 
 
@@ -36,13 +42,44 @@ client.on('message', function(message) {
       if (err) {
         message.reply(err);
       } else {
-        getbuild(champid, function(err, buildmessage) {
+        getbuild(champid, function(err) {
+            message.reply("the top builds that guarentee victory from champion.gg");
+            message.channel.send("final highestplayrate build", {
+              file: 'C:/jeff/Kennen-bot/playratefinal.jpg'
+            });
+            message.channel.send("final highestwinrate build", {
+              file: 'C:/jeff/Kennen-bot/winratefinal.jpg'
+            });
+
+            message.channel.send("starting highestplayrate", {
+              file: 'C:/jeff/Kennen-bot/playratestart.jpg'
+            });
+            message.channel.send("starting items highestwinrate", {
+              file: 'C:/jeff/Kennen-bot/winratestart.jpg'
+            });
 
         });
       }
     });
   } else if (mess.startsWith(prefix + "bestkennen")) {
     message.reply("I believe it is Hieverybod from the NA server");
+  } else if (mess.startsWith(prefix + "testimage")) {
+    message.channel.send({
+      embed: {
+        color: 3447003,
+        title: "This is the build from champion.gg",
+        url: "http://www.champion.gg",
+        fields: [{
+          name: "Starting Items",
+          value: "http://ddragon.leagueoflegends.com/cdn/6.24.1/img/item/1001.png",
+          image: "http://ddragon.leagueoflegends.com/cdn/6.24.1/img/item/1001.png"
+        }]
+      }
+    });
+  } else if (mess.startsWith(prefix + "image")) {
+    message.channel.send("starting items", {
+      file: 'C:/jeff/Kennen-bot/output.jpg'
+    });
   }
 });
 
@@ -54,7 +91,7 @@ client.on('ready', function() {
 
 
 
-function getbuild(champid) {
+function getbuild(champid, cb) {
   console.log(champid);
   request(urlinfo, function(error, response, body) {
     if (error || response.statusCode == 403) {
@@ -73,8 +110,8 @@ function getbuild(champid) {
       var finalitemswin = championobject.hashes.finalitemshashfixed.highestWinrate;
       var startingitemshigh = championobject.hashes.firstitemshash.highestCount;
       var startingitemswin = championobject.hashes.firstitemshash.highestWinrate;
-
-
+      saveitemphotos(finalitemshigh, finalitemswin, startingitemshigh, startingitemswin);
+      cb(false);
     }
   });
 }
@@ -97,4 +134,178 @@ function getchampionID(championname, cb) {
       cb(false, data);
     }
   });
+}
+
+function saveitemphotos(fitems_h, fitems_w, sitems_h, sitems_w) {
+  var fitems_h_itemarray = fitems_h.hash.split("-");
+  var fitems_w_itemarray = fitems_w.hash.split("-");
+  var sitems_h_itemarray = sitems_h.hash.split("-");
+  var sitems_w_itemarray = sitems_w.hash.split("-");
+  for (var items in fitems_h_itemarray) {
+    if (fitems_h_itemarray[items] == 'items') {
+      continue;
+    } else {
+      saveImages(fitems_h_itemarray[items]);
+    }
+  }
+  for (var items in fitems_w_itemarray) {
+    if (fitems_w_itemarray[items] == 'items') {
+      continue;
+    } else {
+      saveImages(fitems_w_itemarray[items]);
+    }
+  }
+  for (var items in sitems_h_itemarray) {
+    if (sitems_h_itemarray[items] == 'first') {
+      continue;
+    } else {
+      saveImages(sitems_h_itemarray[items]);
+    }
+  }
+  for (var items in sitems_w_itemarray) {
+    if (sitems_w_itemarray[items] == 'first') {
+      continue;
+    } else {
+      saveImages(sitems_w_itemarray[items]);
+    }
+  }
+  sortimages(fitems_h_itemarray, fitems_w_itemarray, sitems_h_itemarray, sitems_w_itemarray);
+
+}
+
+function sortimages(array1, array2, array3, array4) {
+  combineimages(array1, 'playratefinal.jpg');
+  combineimages(array2, 'winratefinal.jpg');
+  combineimages(array3, 'playratestart.jpg');
+  combineimages(array4, 'winratestart.jpg');
+  console.log(array1, array2, array3, array4);
+  console.log(array1.length, array2.length, array3.length, array4.length);
+
+}
+
+function saveImages(items) {
+  options.url = 'http://ddragon.leagueoflegends.com/cdn/6.24.1/img/item/' + items + '.png';
+
+  download.image(options)
+    .then(({
+      filename,
+      image
+    }) => {
+      console.log('File saved to', filename)
+    }).catch((err) => {
+      throw err
+    })
+}
+
+function combineimages(array, filename) {
+  var num = 0
+  switch (array.length) {
+    case 0:
+      gm()
+        .in('-page', '+0+0')
+        .minify()
+        .mosaic()
+        .write(filename, function(err) {
+          if (err) console.log(err);
+        });
+      break;
+    case 1:
+      gm()
+        .in('-page', '+0+0')
+        .minify()
+        .mosaic()
+        .write(filename, function(err) {
+          if (err) console.log(err);
+        });
+      break;
+    case 2:
+      gm()
+        .in('-page', '+0+0')
+        .in('C:/jeff/Kennen-bot/photos/' + array[1] + '.png')
+        .minify()
+        .mosaic()
+        .write(filename, function(err) {
+          if (err) console.log(err);
+        });
+      break;
+    case 3:
+      gm()
+        .in('-page', '+0+0')
+        .in('C:/jeff/Kennen-bot/photos/' + array[1] + '.png')
+        .in('-page', '+64+0')
+        .in('C:/jeff/Kennen-bot/photos/' + array[2] + '.png')
+        .minify()
+        .mosaic()
+        .write(filename, function(err) {
+          if (err) console.log(err);
+        });
+      break;
+    case 4:
+      gm()
+        .in('-page', '+0+0')
+        .in('C:/jeff/Kennen-bot/photos/' + array[1] + '.png')
+        .in('-page', '+64+0')
+        .in('C:/jeff/Kennen-bot/photos/' + array[2] + '.png')
+        .in('-page', '128+0')
+        .in('C:/jeff/Kennen-bot/photos/' + array[3] + '.png')
+        .minify()
+        .mosaic()
+        .write(filename, function(err) {
+          if (err) console.log(err);
+        });
+      break;
+    case 5:
+      gm()
+        .in('-page', '+0+0')
+        .in('C:/jeff/Kennen-bot/photos/' + array[1] + '.png')
+        .in('-page', '+64+0')
+        .in('C:/jeff/Kennen-bot/photos/' + array[2] + '.png')
+        .in('-page', '+128+0')
+        .in('C:/jeff/Kennen-bot/photos/' + array[3] + '.png')
+        .in('-page', '+192+0')
+        .in('C:/jeff/Kennen-bot/photos/' + array[4] + '.png')
+        .minify()
+        .mosaic()
+        .write(filename, function(err) {
+          if (err) console.log(err);
+        });
+      break;
+    case 6:
+      gm()
+        .in('-page', '+0+0')
+        .in('C:/jeff/Kennen-bot/photos/' + array[1] + '.png')
+        .in('-page', '+64+0')
+        .in('C:/jeff/Kennen-bot/photos/' + array[2] + '.png')
+        .in('-page', '+128+0')
+        .in('C:/jeff/Kennen-bot/photos/' + array[3] + '.png')
+        .in('-page', '+192+0')
+        .in('C:/jeff/Kennen-bot/photos/' + array[4] + '.png')
+        .in('-page', '+256+0')
+        .in('C:/jeff/Kennen-bot/photos/' + array[5] + '.png')
+        .minify()
+        .mosaic()
+        .write(filename, function(err) {
+          if (err) console.log(err);
+        });
+      break;
+    case 7:
+      gm()
+        .in('-page', '+0+0')
+        .in('C:/jeff/Kennen-bot/photos/' + array[1] + '.png')
+        .in('-page', '+64+0')
+        .in('C:/jeff/Kennen-bot/photos/' + array[2] + '.png')
+        .in('-page', '+128+0')
+        .in('C:/jeff/Kennen-bot/photos/' + array[3] + '.png')
+        .in('-page', '+192+0')
+        .in('C:/jeff/Kennen-bot/photos/' + array[4] + '.png')
+        .in('-page', '+256+0')
+        .in('C:/jeff/Kennen-bot/photos/' + array[5] + '.png')
+        .in('-page', '+320+0')
+        .in('C:/jeff/Kennen-bot/photos/' + array[6] + '.png')
+        .minify()
+        .mosaic()
+        .write(filename, function(err) {
+          if (err) console.log(err);
+        });
+  }
 }
