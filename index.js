@@ -23,7 +23,7 @@ const urlinfo = "http://api.champion.gg/v2/champions?limit=200&champData=hashes,
 const urlchampid = "https://na1.api.riotgames.com/lol/static-data/v3/champions?locale=en_US&dataById=false&api_key=" + lol_api;
 const urlitems = "https://na1.api.riotgames.com/lol/static-data/v3/items?locale=en_US&api_key=" + lol_api;
 const urlitempicture = "http://ddragon.leagueoflegends.com/cdn/6.24.1/img/item/";
-
+const urlsummonerid = "https://na1.api.riotgames.com/lol/summoner/v3/summoners/by-name/";
 
 
 
@@ -31,9 +31,10 @@ const urlitempicture = "http://ddragon.leagueoflegends.com/cdn/6.24.1/img/item/"
 client.login(discord_token);
 
 client.on('message', function(message) {
-  const member = message.member
+  const member = message.member;
   const mess = message.content.toLowerCase();
   const args = message.content.split(' ').slice(1).join(" ");
+  const userchannel = message.channel;
 
   if (mess.startsWith(prefix + "info")) {
     getinfo();
@@ -43,20 +44,20 @@ client.on('message', function(message) {
         message.reply(err);
       } else {
         getbuild(champid, function(err) {
-            message.reply("the top builds that guarentee victory from champion.gg");
-            message.channel.send("final highestplayrate build", {
-              file: 'C:/jeff/Kennen-bot/playratefinal.jpg'
-            });
-            message.channel.send("final highestwinrate build", {
-              file: 'C:/jeff/Kennen-bot/winratefinal.jpg'
-            });
+          message.reply("the top builds that guarentee victory from champion.gg");
+          message.channel.send("final highestplayrate build", {
+            file: 'C:/jeff/Kennen-bot/playratefinal.jpg'
+          });
+          message.channel.send("final highestwinrate build", {
+            file: 'C:/jeff/Kennen-bot/winratefinal.jpg'
+          });
 
-            message.channel.send("starting highestplayrate", {
-              file: 'C:/jeff/Kennen-bot/playratestart.jpg'
-            });
-            message.channel.send("starting items highestwinrate", {
-              file: 'C:/jeff/Kennen-bot/winratestart.jpg'
-            });
+          message.channel.send("starting highestplayrate", {
+            file: 'C:/jeff/Kennen-bot/playratestart.jpg'
+          });
+          message.channel.send("starting items highestwinrate", {
+            file: 'C:/jeff/Kennen-bot/winratestart.jpg'
+          });
 
         });
       }
@@ -79,6 +80,20 @@ client.on('message', function(message) {
   } else if (mess.startsWith(prefix + "image")) {
     message.channel.send("starting items", {
       file: 'C:/jeff/Kennen-bot/output.jpg'
+    });
+  } else if (mess.startsWith(prefix + "test")) {
+    test(message);
+  } else if (mess.startsWith(prefix + "match")) {
+    getsummonerid(args, function(err, summonerobject) {
+      if(err) {
+        message.reply(err);
+      } else {
+        console.log(args);
+        console.log(summonerobject);
+        getlivematch(summonerobject, function(err, livematchobject) {
+
+        });
+      }
     });
   }
 });
@@ -119,8 +134,10 @@ function getbuild(champid, cb) {
 function getchampionID(championname, cb) {
   request(urlchampid, function(error, response, body) {
     if (error || response.statusCode == 403) {
-      cb('expired apikey!');
+      cb('expired apikey! ** 403 response code **');
       return;
+    } else if (response.statusCode == 503) {
+      cb('Riot api ** Static-Data-V3 ** servers are down! Check the riot api discord server. ** 503 response code **');
     } else if (!error && response.statusCode == 200) {
       var importedJSON = JSON.parse(body);
       championname = championname.toLowerCase();
@@ -134,6 +151,36 @@ function getchampionID(championname, cb) {
       cb(false, data);
     }
   });
+}
+
+function getsummonerid(summoner, cb) {
+  request(urlsummonerid + summoner + "?api_key=" + lol_api, function(error, response, body) {
+    if (error || response.statusCode == 403) {
+      cb('expired apikey! ** 403 response code **');
+      return;
+    } else if (response.statusCode == 503) {
+      cb('Riot api ** Summoner-V3 ** servers are down! Check the riot api discord server. ** 503 response code **');
+    } else if(response.statusCode == 404) {
+      cb('summoner not found!');
+    } else if (!error && response.statusCode == 200) {
+      var importedJSON = JSON.parse(body);
+      var summonerid = importedJSON.id;
+      var accountlvl = importedJSON.summonerLevel;
+      var profileID = importedJSON.profileIconId;
+      var summonername = importedJSON.name;
+      var summonerobject = {
+        "summonerid": summonerid,
+        "accountlvl": accountlvl,
+        "profileid": profileID,
+        "name": summonername
+      }
+      cb(false, summonerobject);
+    }
+  });
+}
+
+function getlivematch(summonerobject, cb) {
+
 }
 
 function saveitemphotos(fitems_h, fitems_w, sitems_h, sitems_w) {
@@ -308,4 +355,8 @@ function combineimages(array, filename) {
           if (err) console.log(err);
         });
   }
+}
+
+function test(message) {
+  message.channel.send("test");
 }
