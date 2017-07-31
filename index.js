@@ -20,11 +20,11 @@ const bot_controller = config.bot_controller;
 const champion_gg_token = config.champion_gg_token;
 const lol_api = config.lol_api;
 const urlinfo = "http://api.champion.gg/v2/champions?limit=200&champData=hashes,firstitems,summoners,skills,finalitemshashfixed,masterieshash&api_key=" + champion_gg_token;
-const urlchampid = "https://na1.api.riotgames.com/lol/static-data/v3/champions?locale=en_US&dataById=false&api_key=" + lol_api;
+const urlchampid = "https://euw1.api.riotgames.com/lol/static-data/v3/champions?locale=en_US&dataById=false&api_key=" + lol_api;
 const urlitems = "https://na1.api.riotgames.com/lol/static-data/v3/items?locale=en_US&api_key=" + lol_api;
 const urlitempicture = "http://ddragon.leagueoflegends.com/cdn/6.24.1/img/item/";
 const urlsummonerid = "https://na1.api.riotgames.com/lol/summoner/v3/summoners/by-name/";
-
+const urllivematch = "https://na1.api.riotgames.com/lol/spectator/v3/active-games/by-summoner/";
 
 
 
@@ -44,21 +44,7 @@ client.on('message', function(message) {
         message.reply(err);
       } else {
         getbuild(champid, function(err) {
-          message.reply("the top builds that guarentee victory from champion.gg");
-          message.channel.send("final highestplayrate build", {
-            file: 'C:/jeff/Kennen-bot/playratefinal.jpg'
-          });
-          message.channel.send("final highestwinrate build", {
-            file: 'C:/jeff/Kennen-bot/winratefinal.jpg'
-          });
-
-          message.channel.send("starting highestplayrate", {
-            file: 'C:/jeff/Kennen-bot/playratestart.jpg'
-          });
-          message.channel.send("starting items highestwinrate", {
-            file: 'C:/jeff/Kennen-bot/winratestart.jpg'
-          });
-
+          printbuild(message, args);
         });
       }
     });
@@ -77,21 +63,20 @@ client.on('message', function(message) {
         }]
       }
     });
-  } else if (mess.startsWith(prefix + "image")) {
-    message.channel.send("starting items", {
-      file: 'C:/jeff/Kennen-bot/output.jpg'
-    });
-  } else if (mess.startsWith(prefix + "test")) {
-    test(message);
   } else if (mess.startsWith(prefix + "match")) {
     getsummonerid(args, function(err, summonerobject) {
-      if(err) {
+      if (err) {
         message.reply(err);
       } else {
         console.log(args);
         console.log(summonerobject);
         getlivematch(summonerobject, function(err, livematchobject) {
-
+          if (err) {
+            message.reply(err);
+          } else {
+            console.log(livematchobject);
+            message.reply(livematchobject);
+          }
         });
       }
     });
@@ -125,8 +110,10 @@ function getbuild(champid, cb) {
       var finalitemswin = championobject.hashes.finalitemshashfixed.highestWinrate;
       var startingitemshigh = championobject.hashes.firstitemshash.highestCount;
       var startingitemswin = championobject.hashes.firstitemshash.highestWinrate;
-      saveitemphotos(finalitemshigh, finalitemswin, startingitemshigh, startingitemswin);
-      cb(false);
+      saveitemphotos(finalitemshigh, finalitemswin, startingitemshigh, startingitemswin, function() {
+        cb(false);
+      });
+
     }
   });
 }
@@ -142,11 +129,37 @@ function getchampionID(championname, cb) {
       var importedJSON = JSON.parse(body);
       championname = championname.toLowerCase();
       championname = championname.charAt(0).toUpperCase() + championname.slice(1);
-      try {
-        var data = importedJSON.data[championname].id;
-      } catch (err) {
-        cb('Type a real champion name!');
-        return;
+      if (championname == "Wukong") {
+        data = 62;
+      } else if (championname == "Missfortune" || championname == "Miss fortune" || championname == "Ms. fortune") {
+        data = 21;
+      } else if (championname == "Drmundo" || championname == "Dr mundo") {
+        data = 36;
+      } else if (championname == "Twistedfate" || championname == "Twisted fate") {
+        data = 4;
+      } else if (championname == "Masteryi" || championname == "Master yi") {
+        data = 11;
+      } else if (championname == "Tahmkench" || championname == "Tahm kench") {
+        data = 223;
+      } else if (championname == "Xinzhao" || championname == "Xin zhao") {
+        data = 5;
+      } else if (championname == "Aurelionsol" || championname == "Aurelion sol") {
+        data = 136;
+      } else if (championname == "Leesin" || championname == "Lee sin") {
+        data = 64;
+      } else if (championname == "Reksai" || championname == "Rek'sai") {
+        data = 421;
+      } else if (championname == "Jarvaniv" || championname == "Jarvan iv") {
+        data = 59;
+      } else if (championname == "Kogmaw" || championname == "Kog'maw") {
+        data = 96;
+      } else {
+        try {
+          var data = importedJSON.data[championname].id;
+        } catch (err) {
+          cb('Type a real champion name!');
+          return;
+        }
       }
       cb(false, data);
     }
@@ -160,7 +173,7 @@ function getsummonerid(summoner, cb) {
       return;
     } else if (response.statusCode == 503) {
       cb('Riot api ** Summoner-V3 ** servers are down! Check the riot api discord server. ** 503 response code **');
-    } else if(response.statusCode == 404) {
+    } else if (response.statusCode == 404) {
       cb('summoner not found!');
     } else if (!error && response.statusCode == 200) {
       var importedJSON = JSON.parse(body);
@@ -180,51 +193,83 @@ function getsummonerid(summoner, cb) {
 }
 
 function getlivematch(summonerobject, cb) {
-
+  request(urllivematch + summonerobject.summonerid + "?api_key=" + lol_api, function(error, response, body) {
+    if (error || response.statusCode == 403) {
+      cb('expired apikey! ** 403 response code **');
+      return;
+    } else if (response.statusCode == 503) {
+      cb('Riot api ** Summoner-V3 ** servers are down! Check the riot api discord server. ** 503 response code **');
+    } else if (response.statusCode == 404) {
+      cb('summoner not in a match');
+    } else if (!error && response.statusCode == 200) {
+      console.log("found match");
+      var importedJSON = JSON.parse(body);
+      var gameid = importedJSON.gameId;
+      var gamemode = importedJSON.gameMode;
+      var mapid = importedJSON.mapId;
+      var gameType = importedJSON.gameType;
+      var gametime = importedJSON.gameStartTime;
+      var participants = importedJSON.participants;
+      var matchobject = {
+        "gameid": gameid,
+        "gamemode": gamemode,
+        "mapid": mapid,
+        "gametype": gameType,
+        "gametime": gametime,
+        "participants": participants
+      }
+      cb(false, matchobject);
+    }
+  });
 }
 
-function saveitemphotos(fitems_h, fitems_w, sitems_h, sitems_w) {
+function saveitemphotos(fitems_h, fitems_w, sitems_h, sitems_w, cb) {
   var fitems_h_itemarray = fitems_h.hash.split("-");
   var fitems_w_itemarray = fitems_w.hash.split("-");
   var sitems_h_itemarray = sitems_h.hash.split("-");
   var sitems_w_itemarray = sitems_w.hash.split("-");
-  for (var items in fitems_h_itemarray) {
-    if (fitems_h_itemarray[items] == 'items') {
-      continue;
-    } else {
-      saveImages(fitems_h_itemarray[items]);
-    }
-  }
-  for (var items in fitems_w_itemarray) {
-    if (fitems_w_itemarray[items] == 'items') {
-      continue;
-    } else {
-      saveImages(fitems_w_itemarray[items]);
-    }
-  }
-  for (var items in sitems_h_itemarray) {
-    if (sitems_h_itemarray[items] == 'first') {
-      continue;
-    } else {
-      saveImages(sitems_h_itemarray[items]);
-    }
-  }
-  for (var items in sitems_w_itemarray) {
-    if (sitems_w_itemarray[items] == 'first') {
-      continue;
-    } else {
-      saveImages(sitems_w_itemarray[items]);
-    }
-  }
-  sortimages(fitems_h_itemarray, fitems_w_itemarray, sitems_h_itemarray, sitems_w_itemarray);
-
+  fixforbugwithANOTHERCALLBACK(fitems_h_itemarray, function() {
+    fixforbugwithANOTHERCALLBACK(fitems_w_itemarray, function() {
+      fixforbugwithANOTHERCALLBACK(sitems_h_itemarray, function() {
+        fixforbugwithANOTHERCALLBACK(sitems_w_itemarray, function() {
+          sortimages(fitems_h_itemarray, fitems_w_itemarray, sitems_h_itemarray, sitems_w_itemarray, function() {
+            cb();
+          });
+        });
+      });
+    });
+  });
 }
 
-function sortimages(array1, array2, array3, array4) {
-  combineimages(array1, 'playratefinal.jpg');
-  combineimages(array2, 'winratefinal.jpg');
-  combineimages(array3, 'playratestart.jpg');
-  combineimages(array4, 'winratestart.jpg');
+
+function fixforbugwithANOTHERCALLBACK(array, cb) {
+  var key = 1;
+  var max = array.length;
+  while (key != max) {
+    saveImages(array[key]);
+    key++;
+    if (key == max) {
+      cb();
+    }
+  }
+}
+
+
+
+function sortimages(array1, array2, array3, array4, cb) {
+  console.log("started combining images");
+  combineimages(array1, 'playratefinal.jpg', function() {
+    combineimages(array2, 'winratefinal.jpg', function() {
+      combineimages(array3, 'playratestart.jpg', function() {
+        combineimages(array4, 'winratestart.jpg', function() {
+          cb();
+        });
+      });
+    });
+  });
+
+
+
   console.log(array1, array2, array3, array4);
   console.log(array1.length, array2.length, array3.length, array4.length);
 
@@ -244,7 +289,7 @@ function saveImages(items) {
     })
 }
 
-function combineimages(array, filename) {
+function combineimages(array, filename, cb) {
   var num = 0
   switch (array.length) {
     case 0:
@@ -254,6 +299,9 @@ function combineimages(array, filename) {
         .mosaic()
         .write(filename, function(err) {
           if (err) console.log(err);
+          else {
+            cb();
+          }
         });
       break;
     case 1:
@@ -263,6 +311,9 @@ function combineimages(array, filename) {
         .mosaic()
         .write(filename, function(err) {
           if (err) console.log(err);
+          else {
+            cb();
+          }
         });
       break;
     case 2:
@@ -273,6 +324,9 @@ function combineimages(array, filename) {
         .mosaic()
         .write(filename, function(err) {
           if (err) console.log(err);
+          else {
+            cb();
+          }
         });
       break;
     case 3:
@@ -285,6 +339,9 @@ function combineimages(array, filename) {
         .mosaic()
         .write(filename, function(err) {
           if (err) console.log(err);
+          else {
+            cb();
+          }
         });
       break;
     case 4:
@@ -299,6 +356,9 @@ function combineimages(array, filename) {
         .mosaic()
         .write(filename, function(err) {
           if (err) console.log(err);
+          else {
+            cb();
+          }
         });
       break;
     case 5:
@@ -315,6 +375,9 @@ function combineimages(array, filename) {
         .mosaic()
         .write(filename, function(err) {
           if (err) console.log(err);
+          else {
+            cb();
+          }
         });
       break;
     case 6:
@@ -333,6 +396,9 @@ function combineimages(array, filename) {
         .mosaic()
         .write(filename, function(err) {
           if (err) console.log(err);
+          else {
+            cb();
+          }
         });
       break;
     case 7:
@@ -353,10 +419,30 @@ function combineimages(array, filename) {
         .mosaic()
         .write(filename, function(err) {
           if (err) console.log(err);
+          else {
+            cb();
+          }
         });
   }
 }
 
 function test(message) {
   message.channel.send("test");
+}
+
+function printbuild(message, args) {
+  message.reply("the top build for **" + args + "** that guarentee victory from champion.gg");
+  message.channel.send("**highestplayrate build**", {
+    file: 'C:/jeff/Kennen-bot/playratefinal.jpg'
+  });
+  message.channel.send("**highestwinrate build**", {
+    file: 'C:/jeff/Kennen-bot/winratefinal.jpg'
+  });
+
+  message.channel.send("**highestplayrate starting items**", {
+    file: 'C:/jeff/Kennen-bot/playratestart.jpg'
+  });
+  message.channel.send("**highestwinrate starting items**", {
+    file: 'C:/jeff/Kennen-bot/winratestart.jpg'
+  });
 }
