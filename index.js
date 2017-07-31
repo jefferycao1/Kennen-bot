@@ -34,17 +34,22 @@ client.on('message', function(message) {
   const member = message.member;
   const mess = message.content.toLowerCase();
   const args = message.content.split(' ').slice(1).join(" ");
+  const argstwo = message.content.split(' ').slice(1);
   const userchannel = message.channel;
 
   if (mess.startsWith(prefix + "info")) {
     getinfo();
   } else if (mess.startsWith(prefix + "build")) {
-    getchampionID(args, function(err, champid) {
+    getchampionID(argstwo[0], function(err, champid) {
       if (err) {
         message.reply(err);
       } else {
-        getbuild(champid, function(err) {
-          printbuild(message, args);
+        getbuild(champid, argstwo, function(err, championggobject) {
+          if(err) {
+            message.reply(err);
+          } else{
+            printbuild(message, args, championggobject);
+          }
         });
       }
     });
@@ -80,6 +85,14 @@ client.on('message', function(message) {
         });
       }
     });
+  } else if(mess.startsWith(prefix + 'help')) {
+    const embed = new Discord.RichEmbed()
+      .setTitle('Commands for Kennen-bot')
+      .setColor(3447003)
+      .addField("** -build **", "Type -build championname role(OPTIONAL) \nFor example: -build kennen or -build ezreal adc.\nIf this doesn't work at first, just try it a second time and it should work.")
+
+      message.channel.send({embed});
+
   }
 });
 
@@ -91,8 +104,17 @@ client.on('ready', function() {
 
 
 
-function getbuild(champid, cb) {
-  console.log(champid);
+function getbuild(champid, argstwo, cb) {
+  //console.log(champid);
+  var champrole = argstwo.slice(1).join('_').toUpperCase();
+  if(champrole == 'ADC' || champrole == 'DUOCARRY') {
+    champrole = 'DUO_CARRY';
+  } else if(champrole == 'DUOSUPPORT' || champrole == 'SUPPORT') {
+    champrole = 'DUO_SUPPORT';
+  } else if(champrole == 'MID') {
+    champrole = 'MIDDLE';
+  }
+  console.log(champrole);
   request(urlinfo, function(error, response, body) {
     if (error || response.statusCode == 403) {
       cb('invalid champion.gg apikey!');
@@ -100,19 +122,47 @@ function getbuild(champid, cb) {
     } else if (!error && response.statusCode == 200) {
       var importedJSON = JSON.parse(body);
       var championobject = {};
-      for (var key in importedJSON) {
-        if (importedJSON[key].championId == champid) {
-          championobject = importedJSON[key];
-          break;
+      var notfound = true;
+      if(champrole == "") {
+        for (var key in importedJSON) {
+          if (importedJSON[key].championId == champid) {
+            championobject = importedJSON[key];
+            notfound = false;
+            break;
+          }
+        }
+      } else {
+        for(var key in importedJSON) {
+          if (importedJSON[key].championId == champid && importedJSON[key].role == champrole) {
+            championobject = importedJSON[key];
+            notfound = false;
+            break;
+          }
         }
       }
-      var finalitemshigh = championobject.hashes.finalitemshashfixed.highestCount;
-      var finalitemswin = championobject.hashes.finalitemshashfixed.highestWinrate;
-      var startingitemshigh = championobject.hashes.firstitemshash.highestCount;
-      var startingitemswin = championobject.hashes.firstitemshash.highestWinrate;
-      saveitemphotos(finalitemshigh, finalitemswin, startingitemshigh, startingitemswin, function() {
-        cb(false);
-      });
+      if(notfound) {
+        cb('can not find build for that role!');
+      }
+      else {
+        var finalitemshigh = championobject.hashes.finalitemshashfixed.highestCount;
+        var finalitemswin = championobject.hashes.finalitemshashfixed.highestWinrate;
+        var startingitemshigh = championobject.hashes.firstitemshash.highestCount;
+        var startingitemswin = championobject.hashes.firstitemshash.highestWinrate;
+        var championggobject = {
+          finalitemshighgames: finalitemshigh.count,
+          finalitemshighwinrate: finalitemshigh.winrate,
+          finalitemswingames: finalitemswin.count,
+          finalitemswinwinrate: finalitemswin.winrate,
+          startingitemshighgames: startingitemshigh.count,
+          startingitemshighwinrate: startingitemshigh.winrate,
+          startingitemswingames: startingitemswin.count,
+          startingitemswinwinrate: startingitemswin.winrate,
+          role: championobject.role
+        }
+        saveitemphotos(finalitemshigh, finalitemswin, startingitemshigh, startingitemswin, function() {
+          cb(false, championggobject);
+        });
+      }
 
     }
   });
@@ -430,19 +480,20 @@ function test(message) {
   message.channel.send("test");
 }
 
-function printbuild(message, args) {
-  message.reply("the top build for **" + args + "** that guarentee victory from champion.gg");
-  message.channel.send("**highestplayrate build**", {
+function printbuild(message, args, championggobject) {
+  message.reply("the builds for **" + args + "**" + "in the **" + championggobject.role + "** lane from champion.gg");
+  message.channel.send("**highestplayrate build**" + " (number of games: **" + championggobject.finalitemshighgames + "** , winrate: **" + championggobject.finalitemshighwinrate.toFixed(2) + "**% )", {
     file: 'C:/jeff/Kennen-bot/playratefinal.jpg'
   });
-  message.channel.send("**highestwinrate build**", {
+  message.channel.send("**highestwinrate build**" + " (number of games: **" + championggobject.finalitemswingames + "** , winrate: **" + championggobject.finalitemswinwinrate.toFixed(2) + "**% )", {
     file: 'C:/jeff/Kennen-bot/winratefinal.jpg'
   });
 
-  message.channel.send("**highestplayrate starting items**", {
+  message.channel.send("**highestplayrate starting items**" + " (number of games: **" + championggobject.startingitemshighgames + "** , winrate: **" + championggobject.startingitemshighwinrate.toFixed(2) + "**% )", {
     file: 'C:/jeff/Kennen-bot/playratestart.jpg'
   });
-  message.channel.send("**highestwinrate starting items**", {
+  message.channel.send("**highestwinrate starting items**"  + " (number of games: **" + championggobject.startingitemswingames + "** , winrate: **" + championggobject.startingitemswinwinrate.toFixed(2) + "**% )", {
     file: 'C:/jeff/Kennen-bot/winratestart.jpg'
   });
+
 }
