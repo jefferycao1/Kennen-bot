@@ -5,6 +5,7 @@ const client = new Discord.Client();
 const request = require("request");
 const json = require('json-object').setup(global);
 const download = require('image-downloader');
+const roundTo = require('round-to');
 
 
 var config = JSON.parse(fs.readFileSync('./settings.json', 'utf-8'));
@@ -20,13 +21,52 @@ const bot_controller = config.bot_controller;
 const champion_gg_token = config.champion_gg_token;
 const lol_api = config.lol_api;
 const urlinfo = "http://api.champion.gg/v2/champions?limit=200&champData=hashes,firstitems,summoners,skills,finalitemshashfixed,masterieshash&api_key=" + champion_gg_token;
-const urlchampid = "https://euw1.api.riotgames.com/lol/static-data/v3/champions?locale=en_US&dataById=false&api_key=" + lol_api;
+const urlchampid = "https://na1.api.riotgames.com/lol/static-data/v3/champions?locale=en_US&dataById=false&api_key=" + lol_api;
 const urlitems = "https://na1.api.riotgames.com/lol/static-data/v3/items?locale=en_US&api_key=" + lol_api;
 const urlitempicture = "http://ddragon.leagueoflegends.com/cdn/6.24.1/img/item/";
 const urlsummonerid = "https://na1.api.riotgames.com/lol/summoner/v3/summoners/by-name/";
 const urllivematch = "https://na1.api.riotgames.com/lol/spectator/v3/active-games/by-summoner/";
+const urlgetchamp = "http://ddragon.leagueoflegends.com/cdn/6.24.1/data/en_US/champion.json";
 
-
+var queuearray = {
+  '0': 'Custom',
+  '8': 'Normal 3v3',
+  '2': 'Normal 5v5 Blind Pick',
+  '14': 'Normal 5v5 Draft Pick',
+  '4': 'Ranked Solo 5v5',
+  '6': 'Ranked Premade 5v5',
+  '41': 'Ranked 3v3',
+  '42': 'Ranked Team 5v5',
+  '16': 'Dominion 5v5 Blind Pick',
+  '17': 'Dominion 5v5 Draft Pick',
+  '25': 'Dominion Coop vs Al',
+  '31': 'Coop vs Al Into Bot',
+  '32': 'Coop vs Al Beginner Bot',
+  '61': 'Teambuilder',
+  '65': 'ARAM',
+  '70': 'One for All',
+  '76': 'URF',
+  '325': 'All Random Games',
+  '400': 'Normal 5v5 Draft Pick',
+  '410': 'Ranked 5v5 Draft Pick',
+  '420': 'Ranked Solo',
+  '430': 'Normal Blind Pick',
+  '440': 'Ranked Flex',
+  '600': 'Blood Hunt Assassin',
+  '610': 'Dark Star'
+};
+var mapname = {
+  '1': `Summoner's Rift`,
+  '2': `Summoner's Rift Autumn`,
+  '3': 'Proving Grounds',
+  '4': 'Twisted Treeline',
+  '8': 'The Crystal Scar',
+  '10': 'Twisted Treeline',
+  '11': `Summoner's Rift`,
+  '12': 'Howling Abyss',
+  '14': `Butcher's Bridge`,
+  '16': 'Cosmic Ruins'
+};
 
 client.login(discord_token);
 
@@ -45,9 +85,9 @@ client.on('message', function(message) {
         message.reply(err);
       } else {
         getbuild(champid, argstwo, function(err, championggobject) {
-          if(err) {
+          if (err) {
             message.reply(err);
-          } else{
+          } else {
             printbuild(message, args, championggobject);
           }
         });
@@ -80,18 +120,26 @@ client.on('message', function(message) {
             message.reply(err);
           } else {
             console.log(livematchobject);
-            message.reply(livematchobject);
+            matchinfo(livematchobject, summonerobject, function(err, matchobject, summonerobject) {
+              if (err) {
+                message.reply(err);
+              } else {
+
+              }
+            });
           }
         });
       }
     });
-  } else if(mess.startsWith(prefix + 'help')) {
+  } else if (mess.startsWith(prefix + 'help')) {
     const embed = new Discord.RichEmbed()
       .setTitle('Commands for Kennen-bot')
-      .setColor(3447003)
-      .addField("** -build **", "Type -build championname role(OPTIONAL) \nFor example: -build kennen or -build ezreal adc.\nIf this doesn't work at first, just try it a second time and it should work.")
+      .setColor(12717994)
+      .addField("** -build **", "Type -build championname role \n**Examples:** -build kennen -build ezreal adc.\nIf this doesn't work at first, try a second time.")
 
-      message.channel.send({embed});
+    message.channel.send({
+      embed
+    });
 
   }
 });
@@ -106,12 +154,13 @@ client.on('ready', function() {
 
 function getbuild(champid, argstwo, cb) {
   //console.log(champid);
+  console.log('success');
   var champrole = argstwo.slice(1).join('_').toUpperCase();
-  if(champrole == 'ADC' || champrole == 'DUOCARRY') {
+  if (champrole == 'ADC' || champrole == 'DUOCARRY') {
     champrole = 'DUO_CARRY';
-  } else if(champrole == 'DUOSUPPORT' || champrole == 'SUPPORT') {
+  } else if (champrole == 'DUOSUPPORT' || champrole == 'SUPPORT') {
     champrole = 'DUO_SUPPORT';
-  } else if(champrole == 'MID') {
+  } else if (champrole == 'MID') {
     champrole = 'MIDDLE';
   }
   console.log(champrole);
@@ -123,7 +172,7 @@ function getbuild(champid, argstwo, cb) {
       var importedJSON = JSON.parse(body);
       var championobject = {};
       var notfound = true;
-      if(champrole == "") {
+      if (champrole == "") {
         for (var key in importedJSON) {
           if (importedJSON[key].championId == champid) {
             championobject = importedJSON[key];
@@ -132,7 +181,7 @@ function getbuild(champid, argstwo, cb) {
           }
         }
       } else {
-        for(var key in importedJSON) {
+        for (var key in importedJSON) {
           if (importedJSON[key].championId == champid && importedJSON[key].role == champrole) {
             championobject = importedJSON[key];
             notfound = false;
@@ -140,10 +189,9 @@ function getbuild(champid, argstwo, cb) {
           }
         }
       }
-      if(notfound) {
+      if (notfound) {
         cb('can not find build for that role!');
-      }
-      else {
+      } else {
         var finalitemshigh = championobject.hashes.finalitemshashfixed.highestCount;
         var finalitemswin = championobject.hashes.finalitemshashfixed.highestWinrate;
         var startingitemshigh = championobject.hashes.firstitemshash.highestCount;
@@ -159,6 +207,7 @@ function getbuild(champid, argstwo, cb) {
           startingitemswinwinrate: startingitemswin.winrate,
           role: championobject.role
         }
+        console.log('success');
         saveitemphotos(finalitemshigh, finalitemswin, startingitemshigh, startingitemswin, function() {
           cb(false, championggobject);
         });
@@ -175,6 +224,8 @@ function getchampionID(championname, cb) {
       return;
     } else if (response.statusCode == 503) {
       cb('Riot api ** Static-Data-V3 ** servers are down! Check the riot api discord server. ** 503 response code **');
+    } else if (response.statusCode == 429) {
+      cb('rate limit exceeded');
     } else if (!error && response.statusCode == 200) {
       var importedJSON = JSON.parse(body);
       championname = championname.toLowerCase();
@@ -266,11 +317,120 @@ function getlivematch(summonerobject, cb) {
         "mapid": mapid,
         "gametype": gameType,
         "gametime": gametime,
-        "participants": participants
+        "participants": participants,
+        "queue": importedJSON.gameQueueConfigId
       }
       cb(false, matchobject);
     }
   });
+}
+
+function matchinfo(livematchobject, summonerobject, cb) {
+  var placeholder = livematchobject.queue;
+  var gametype = queuearray[placeholder];
+  placeholder = livematchobject.mapid;
+  var map = mapname[placeholder];
+  var matchid = livematchobject.gameid;
+  var time = livematchobject.gametime;
+  var milliseconds = (new Date).getTime();
+  time = (time - milliseconds) * -1;
+  var second = (time / 1000) % 60 - 0.5;
+  var minute = (time / (1000 * 60)) % 60 - 0.5;
+  var hour = (time / (1000 * 60 * 60)) - 0.5;
+  second = roundTo(second, 0);
+  minute = roundTo(minute, 0);
+  hour = roundTo(hour, 0);
+  time = "**" + hour + ":" + minute + ":" + second + "**";
+  var players = livematchobject.participants;
+  var blueplayers = [];
+  var redplayers = [];
+  var team;
+  for (var i = 0; i < players.length; i++) {
+    playerobject = {};
+    if (players[i].teamId == 100) {
+      playerobject.summonername = players[i].summonerName;
+      playerobject.championid = players[i].championId;
+      playerobject.summonerid = players[i].summonerId;
+      playerobject.team = "BLUE";
+      playerobject.mostplayed = false;
+      playerobject.masterypoints = 0;
+      blueplayers.push(playerobject);
+      if(summonerobject.summonerid == players[i].summonerId) {
+        team = 'BLUE';
+      }
+    } else {
+      playerobject.summonername = players[i].summonerName;
+      playerobject.championid = players[i].championId;
+      playerobject.summonerid = players[i].summonerId;
+      playerobject.team = "RED";
+      playerobject.mostplayed = false;
+      playerobject.masterypoits = 0;
+      redplayers.push(playerobject);
+      if(summonerobject.summonerid == players[i].summonerId) {
+        team = 'RED';
+      }
+    }
+  }
+  matchobject = {
+    'gametype': gametype,
+    'map': map,
+    'time': time,
+    'blueplayers': blueplayers,
+    'redplayers': redplayers,
+    'team': team
+  }
+  livematchaddchampion(matchobject, function(err, newmatchobject) {
+    if(err) {
+      cb(err);
+    }else {
+      cb(false, newmatchobject, summonerobject);
+    }
+
+  });
+}
+
+function livematchaddchampion(matchobject, cb) {
+  request(urlgetchamp, function(error, response, body) {
+    if (response.statusCode == 503) {
+      cb('Riot ddragon servers down! Check the riot api discord server. ** 503 response code **');
+    } else if (!error && response.statusCode == 200) {
+      var importedJSON = JSON.parse(body);
+      var anothajson = importedJSON.data;
+      for (var i = 0; i < matchobject.blueplayers.length; i++) {
+        for ( var key in anothajson) {
+          if(anothajson[key].key == (matchobject.blueplayers[i].championid + "")) {
+            matchobject.blueplayers[i].championname = anothajson[key].id;
+          }
+          else{
+            continue;
+          }
+        }
+      }
+      for (var i = 0; i < matchobject.redplayers.length; i++) {
+        for ( var key in anothajson) {
+          if(anothajson[key].key == (matchobject.redplayers[i].championid + "")) {
+            matchobject.blueplayers[i].championname = anothajson[key].id;
+          }
+          else{
+            continue;
+          }
+        }
+      }
+      }
+  });
+  livematchaddmastery(matchobject, function(err, newmatchobject) {
+    if(err) {
+      cb(err);
+    } else {
+      cb(false, newmatchobject);
+    }
+  })
+}
+
+function livematchaddmastery(matchobject, cb) {
+
+
+
 }
 
 function saveitemphotos(fitems_h, fitems_w, sitems_h, sitems_w, cb) {
@@ -336,6 +496,7 @@ function saveImages(items) {
       console.log('File saved to', filename)
     }).catch((err) => {
       throw err
+
     })
 }
 
@@ -481,18 +642,18 @@ function test(message) {
 }
 
 function printbuild(message, args, championggobject) {
-  message.reply("the builds for **" + args + "**" + "in the **" + championggobject.role + "** lane from champion.gg");
-  message.channel.send("**highestplayrate build**" + " (number of games: **" + championggobject.finalitemshighgames + "** , winrate: **" + championggobject.finalitemshighwinrate.toFixed(2) + "**% )", {
+  message.reply("the builds for **" + args + " **" + "in the **" + championggobject.role + "** lane from champion.gg");
+  message.channel.send("**Highest Play-Rate Build**" + " (number of games: **" + championggobject.finalitemshighgames + "** , winrate: **" + championggobject.finalitemshighwinrate.toFixed(2) + "**% )", {
     file: 'C:/jeff/Kennen-bot/playratefinal.jpg'
   });
-  message.channel.send("**highestwinrate build**" + " (number of games: **" + championggobject.finalitemswingames + "** , winrate: **" + championggobject.finalitemswinwinrate.toFixed(2) + "**% )", {
+  message.channel.send("**Highest Win-Rate Build**" + " (number of games: **" + championggobject.finalitemswingames + "** , winrate: **" + championggobject.finalitemswinwinrate.toFixed(2) + "**% )", {
     file: 'C:/jeff/Kennen-bot/winratefinal.jpg'
   });
 
-  message.channel.send("**highestplayrate starting items**" + " (number of games: **" + championggobject.startingitemshighgames + "** , winrate: **" + championggobject.startingitemshighwinrate.toFixed(2) + "**% )", {
+  message.channel.send("**Highest Play-Rate Starting Items**" + " (number of games: **" + championggobject.startingitemshighgames + "** , winrate: **" + championggobject.startingitemshighwinrate.toFixed(2) + "**% )", {
     file: 'C:/jeff/Kennen-bot/playratestart.jpg'
   });
-  message.channel.send("**highestwinrate starting items**"  + " (number of games: **" + championggobject.startingitemswingames + "** , winrate: **" + championggobject.startingitemswinwinrate.toFixed(2) + "**% )", {
+  message.channel.send("**Highest Win-Rate Starting Items**" + " (number of games: **" + championggobject.startingitemswingames + "** , winrate: **" + championggobject.startingitemswinwinrate.toFixed(2) + "**% )", {
     file: 'C:/jeff/Kennen-bot/winratestart.jpg'
   });
 
