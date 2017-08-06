@@ -139,6 +139,7 @@ client.on('message', function(message) {
       .setTitle('Commands for Kennen-bot')
       .setColor(12717994)
       .addField("** -build **", "Type -build championname role \n**Examples:** -build kennen -build ezreal adc.\nThis command will return builds from champion.gg")
+      .addField("** -match **", "Type -match summonername \n**Examples:** -match hieverybod\nThis will return the current match they are in and info about it\nOnly works for games in NA")
 
     message.channel.send({
       embed
@@ -831,20 +832,20 @@ function matchmessage(message, matchobject, summonerobject) {
   var enemyteam = "";
   var yourteam = "";
   for (var i = 0; i < matchobject[teamarray].length; i++) {
-    var num = matchobject[teamarray][i].wins/(matchobject[teamarray][i].losses + matchobject[teamarray][i].wins);
-    var winrate = roundTo( num , 2);
+    var num = matchobject[teamarray][i].wins / (matchobject[teamarray][i].losses + matchobject[teamarray][i].wins);
+    var winrate = roundTo(num, 2);
     enemyteam += "**" + matchobject[teamarray][i].summonername + "** ----- **" + matchobject[teamarray][i].championname + "**" + " ----- Rank: **" + matchobject[teamarray][i].tier + " " + matchobject[teamarray][i].rank + " ** ----- Winrate: **" + winrate + "%**\n";
   }
   for (var i = 0; i < matchobject[yourarray].length; i++) {
-    var num = matchobject[yourarray][i].wins/( matchobject[yourarray][i].losses + matchobject[yourarray][i].wins);
-    var winrate = roundTo(num , 2);
+    var num = matchobject[yourarray][i].wins / (matchobject[yourarray][i].losses + matchobject[yourarray][i].wins);
+    var winrate = roundTo(num, 2);
     yourteam += "**" + matchobject[yourarray][i].summonername + "** ----- **" + matchobject[yourarray][i].championname + "**" + " ----- Rank: **" + matchobject[yourarray][i].tier + " " + matchobject[yourarray][i].rank + " ** ----- Winrate: **" + winrate + "%**\n";
   }
   var watchout = "";
   var mains = "These players are playing their main: ";
   var mastery = "These players have >50000 mastery points on their champ: ";
-  for (var i = 0; i < matchobject[teamarray].length; i ++ ) {
-    if(matchobject[teamarray][i].mostplayed) {
+  for (var i = 0; i < matchobject[teamarray].length; i++) {
+    if (matchobject[teamarray][i].mostplayed) {
       mains += "** " + matchobject[teamarray][i].summonername + "**(** " + matchobject[teamarray][i].championname + "**), ";
     } else if (matchobject[teamarray][i].masterypoints > 50000) {
       mastery += "** " + matchobject[teamarray][i].summonername + "**(** " + matchobject[teamarray][i].championname + "**), ";
@@ -853,9 +854,9 @@ function matchmessage(message, matchobject, summonerobject) {
 
   watchout += mains + "\n" + mastery;
 
-  var highranks= "";
-  for (var i = 0; i < matchobject[teamarray].length; i ++ ) {
-    if(matchobject[teamarray][i].tier == "PLATINUM" || matchobject[teamarray][i].tier == "DIAMOND" || matchobject[teamarray][i].tier == "MASTER" || matchobject[teamarray][i].tier == "CHALLENGER"){
+  var highranks = "";
+  for (var i = 0; i < matchobject[teamarray].length; i++) {
+    if (matchobject[teamarray][i].tier == "PLATINUM" || matchobject[teamarray][i].tier == "DIAMOND" || matchobject[teamarray][i].tier == "MASTER" || matchobject[teamarray][i].tier == "CHALLENGER") {
       highranks += "**" + matchobject[teamarray][i].summonername + "**(** " + matchobject[teamarray][i].championname + "**), ";
     }
 
@@ -867,10 +868,10 @@ function matchmessage(message, matchobject, summonerobject) {
     .setTitle('Live Match Info for **' + summonerobject.name + "**")
     .setAuthor(summonerobject.name, "http://ddragon.leagueoflegends.com/cdn/6.24.1/img/profileicon/" + summonerobject.profileid + ".png")
     .setDescription(matchobject.gametype + " on " + matchobject.map + " **" + matchobject.time + " **in game")
-    .addField("Enemy Team", enemyteam)
-    .addField("Your Team", yourteam)
-    .addField("Enemy Players to Watch", watchout)
-    .addField("High Ranked Enemy Players", highranks)
+    .addField("Enemy Team", enemyteam, true)
+    .addField("Your Team", yourteam, true)
+    .addField("Enemy Players to Watch", watchout, true)
+    .addField("High Ranked Enemy Players", highranks, true)
     .setColor(12717994)
 
 
