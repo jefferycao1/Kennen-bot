@@ -6,7 +6,7 @@ const request = require("request");
 const json = require('json-object').setup(global);
 const download = require('image-downloader');
 const roundTo = require('round-to');
-
+const async = require('async');
 
 var config = JSON.parse(fs.readFileSync('./settings.json', 'utf-8'));
 const options = {
@@ -27,6 +27,7 @@ const urlitempicture = "http://ddragon.leagueoflegends.com/cdn/6.24.1/img/item/"
 const urlsummonerid = "https://na1.api.riotgames.com/lol/summoner/v3/summoners/by-name/";
 const urllivematch = "https://na1.api.riotgames.com/lol/spectator/v3/active-games/by-summoner/";
 const urlgetchamp = "http://ddragon.leagueoflegends.com/cdn/6.24.1/data/en_US/champion.json";
+const urlgetmastery = "https://na1.api.riotgames.com/lol/champion-mastery/v3/champion-masteries/by-summoner/";
 
 var queuearray = {
   '0': 'Custom',
@@ -119,7 +120,7 @@ client.on('message', function(message) {
           if (err) {
             message.reply(err);
           } else {
-            console.log(livematchobject);
+            //console.log(livematchobject);
             matchinfo(livematchobject, summonerobject, function(err, matchobject, summonerobject) {
               if (err) {
                 message.reply(err);
@@ -364,7 +365,7 @@ function matchinfo(livematchobject, summonerobject, cb) {
       playerobject.summonerid = players[i].summonerId;
       playerobject.team = "RED";
       playerobject.mostplayed = false;
-      playerobject.masterypoits = 0;
+      playerobject.masterypoints = 0;
       redplayers.push(playerobject);
       if(summonerobject.summonerid == players[i].summonerId) {
         team = 'RED';
@@ -409,7 +410,7 @@ function livematchaddchampion(matchobject, cb) {
       for (var i = 0; i < matchobject.redplayers.length; i++) {
         for ( var key in anothajson) {
           if(anothajson[key].key == (matchobject.redplayers[i].championid + "")) {
-            matchobject.blueplayers[i].championname = anothajson[key].id;
+            matchobject.redplayers[i].championname = anothajson[key].id;
           }
           else{
             continue;
@@ -417,20 +418,71 @@ function livematchaddchampion(matchobject, cb) {
         }
       }
       }
+
+      livematchaddmastery(matchobject, function(err, newmatchobject) {
+        if(err) {
+          cb(err);
+        } else {
+          cb(false, newmatchobject);
+        }
+      })
   });
-  livematchaddmastery(matchobject, function(err, newmatchobject) {
-    if(err) {
-      cb(err);
-    } else {
-      cb(false, newmatchobject);
-    }
-  })
+
+
 }
 
 function livematchaddmastery(matchobject, cb) {
+  //console.log(matchobject);
+  var teamarray;
+  if(matchobject.team == 'RED') {
+    teamarray = "blueplayers";
+  } else {
+    teamarray = "redplayers";
+}
+var loops = 0;
+  async.forEachOf(matchobject[teamarray], function(value, l, callback){
+    request(urlgetmastery + matchobject[teamarray][l].summonerid + "?api_key=" + lol_api , function(error, response, body) {
+      if (response.statusCode == 503) {
+        cb('Riot ddragon servers down! Check the riot api discord server. ** 503 response code **');
+      } else if(response.statusCode == 404) {
+        cb('404 in urlgetmastery link');
+      } else if (!error && response.statusCode == 200) {
+        console.log('inside loop');
+        var importedJSON = JSON.parse(body);
+
+        if(importedJSON[0].championId == matchobject[teamarray][l].championid) {
+          matchobject[teamarray][l].mostplayed = true;
+          console.log('mastery success');
+        }
+        for(var j = 0; j < 10; j++ ) {
+          if(importedJSON[j].championId == matchobject[teamarray][l].championid) {
+            matchobject[teamarray][l].masterypoints = importedJSON[j].championPoints;
+            console.log('mastery success2');
+            break;
+          }
+        }
+        loops++;
+        if(loops == matchobject[teamarray].length) {
+          livematchaddrank(matchobject, function(err, newmatchobject) {
+            console.log('DONE');
+              if(err) {
+                cb(err);
+              } else {
+                cb(false, newmatchobject);
+              }
+            });
+        }
+      callback();
+      }
+    });
+
+  });
+
+  }
 
 
-
+function livematchaddrank(matchobject, cb) {
+  console.log(matchobject);
 }
 
 function saveitemphotos(fitems_h, fitems_w, sitems_h, sitems_w, cb) {
@@ -438,10 +490,10 @@ function saveitemphotos(fitems_h, fitems_w, sitems_h, sitems_w, cb) {
   var fitems_w_itemarray = fitems_w.hash.split("-");
   var sitems_h_itemarray = sitems_h.hash.split("-");
   var sitems_w_itemarray = sitems_w.hash.split("-");
-  fixforbugwithANOTHERCALLBACK(fitems_h_itemarray, function() {
-    fixforbugwithANOTHERCALLBACK(fitems_w_itemarray, function() {
-      fixforbugwithANOTHERCALLBACK(sitems_h_itemarray, function() {
-        fixforbugwithANOTHERCALLBACK(sitems_w_itemarray, function() {
+  saveImages(fitems_h_itemarray, function() {
+    saveImages(fitems_w_itemarray, function() {
+      saveImages(sitems_h_itemarray, function() {
+        saveImages(sitems_w_itemarray, function() {
           sortimages(fitems_h_itemarray, fitems_w_itemarray, sitems_h_itemarray, sitems_w_itemarray, function() {
             cb();
           });
@@ -451,17 +503,29 @@ function saveitemphotos(fitems_h, fitems_w, sitems_h, sitems_w, cb) {
   });
 }
 
+function saveImages(array, cb) {
 
-function fixforbugwithANOTHERCALLBACK(array, cb) {
   var key = 1;
   var max = array.length;
   while (key != max) {
-    saveImages(array[key]);
-    key++;
-    if (key == max) {
-      cb();
-    }
+    options.url = 'http://ddragon.leagueoflegends.com/cdn/6.24.1/img/item/' + array[key] + '.png';
+
+    download.image(options)
+      .then(({
+        filename,
+        image
+      }) => {
+        console.log('File saved to', filename)
+      }).catch((err) => {
+        throw err
+
+      })
+      key++;
+      if(key == max) {
+        cb();
+      }
   }
+
 }
 
 
@@ -483,21 +547,6 @@ function sortimages(array1, array2, array3, array4, cb) {
   console.log(array1, array2, array3, array4);
   console.log(array1.length, array2.length, array3.length, array4.length);
 
-}
-
-function saveImages(items) {
-  options.url = 'http://ddragon.leagueoflegends.com/cdn/6.24.1/img/item/' + items + '.png';
-
-  download.image(options)
-    .then(({
-      filename,
-      image
-    }) => {
-      console.log('File saved to', filename)
-    }).catch((err) => {
-      throw err
-
-    })
 }
 
 function combineimages(array, filename, cb) {
