@@ -28,6 +28,7 @@ const urlsummonerid = "https://na1.api.riotgames.com/lol/summoner/v3/summoners/b
 const urllivematch = "https://na1.api.riotgames.com/lol/spectator/v3/active-games/by-summoner/";
 const urlgetchamp = "http://ddragon.leagueoflegends.com/cdn/6.24.1/data/en_US/champion.json";
 const urlgetmastery = "https://na1.api.riotgames.com/lol/champion-mastery/v3/champion-masteries/by-summoner/";
+const urlgetrank = "https://na1.api.riotgames.com/lol/league/v3/positions/by-summoner/";
 
 var queuearray = {
   '0': 'Custom',
@@ -115,7 +116,6 @@ client.on('message', function(message) {
         message.reply(err);
       } else {
         console.log(args);
-        console.log(summonerobject);
         getlivematch(summonerobject, function(err, livematchobject) {
           if (err) {
             message.reply(err);
@@ -125,7 +125,9 @@ client.on('message', function(message) {
               if (err) {
                 message.reply(err);
               } else {
-
+                console.log(matchobject);
+                console.log(summonerobject);
+                matchmessage(message, matchobject, summonerobject);
               }
             });
           }
@@ -136,7 +138,7 @@ client.on('message', function(message) {
     const embed = new Discord.RichEmbed()
       .setTitle('Commands for Kennen-bot')
       .setColor(12717994)
-      .addField("** -build **", "Type -build championname role \n**Examples:** -build kennen -build ezreal adc.\nIf this doesn't work at first, try a second time.")
+      .addField("** -build **", "Type -build championname role \n**Examples:** -build kennen -build ezreal adc.\nThis command will return builds from champion.gg")
 
     message.channel.send({
       embed
@@ -304,7 +306,7 @@ function getlivematch(summonerobject, cb) {
     } else if (response.statusCode == 404) {
       cb('summoner not in a match');
     } else if (!error && response.statusCode == 200) {
-      console.log("found match");
+      console.log("found match, making matchobject");
       var importedJSON = JSON.parse(body);
       var gameid = importedJSON.gameId;
       var gamemode = importedJSON.gameMode;
@@ -341,7 +343,7 @@ function matchinfo(livematchobject, summonerobject, cb) {
   second = roundTo(second, 0);
   minute = roundTo(minute, 0);
   hour = roundTo(hour, 0);
-  time = "**" + hour + ":" + minute + ":" + second + "**";
+  time = hour + " hours, " + minute + " minutes and " + second + " seconds";
   var players = livematchobject.participants;
   var blueplayers = [];
   var redplayers = [];
@@ -356,7 +358,7 @@ function matchinfo(livematchobject, summonerobject, cb) {
       playerobject.mostplayed = false;
       playerobject.masterypoints = 0;
       blueplayers.push(playerobject);
-      if(summonerobject.summonerid == players[i].summonerId) {
+      if (summonerobject.summonerid == players[i].summonerId) {
         team = 'BLUE';
       }
     } else {
@@ -367,7 +369,7 @@ function matchinfo(livematchobject, summonerobject, cb) {
       playerobject.mostplayed = false;
       playerobject.masterypoints = 0;
       redplayers.push(playerobject);
-      if(summonerobject.summonerid == players[i].summonerId) {
+      if (summonerobject.summonerid == players[i].summonerId) {
         team = 'RED';
       }
     }
@@ -381,9 +383,9 @@ function matchinfo(livematchobject, summonerobject, cb) {
     'team': team
   }
   livematchaddchampion(matchobject, function(err, newmatchobject) {
-    if(err) {
+    if (err) {
       cb(err);
-    }else {
+    } else {
       cb(false, newmatchobject, summonerobject);
     }
 
@@ -398,34 +400,36 @@ function livematchaddchampion(matchobject, cb) {
       var importedJSON = JSON.parse(body);
       var anothajson = importedJSON.data;
       for (var i = 0; i < matchobject.blueplayers.length; i++) {
-        for ( var key in anothajson) {
-          if(anothajson[key].key == (matchobject.blueplayers[i].championid + "")) {
+        for (var key in anothajson) {
+          if (anothajson[key].key == (matchobject.blueplayers[i].championid + "")) {
             matchobject.blueplayers[i].championname = anothajson[key].id;
-          }
-          else{
+          } else if (matchobject.blueplayers[i].championid == 141) {
+            matchobject.blueplayers[i].championname = "Kayne";
+          } else {
             continue;
           }
         }
       }
       for (var i = 0; i < matchobject.redplayers.length; i++) {
-        for ( var key in anothajson) {
-          if(anothajson[key].key == (matchobject.redplayers[i].championid + "")) {
+        for (var key in anothajson) {
+          if (anothajson[key].key == (matchobject.redplayers[i].championid + "")) {
             matchobject.redplayers[i].championname = anothajson[key].id;
-          }
-          else{
+          } else if (matchobject.redplayers[i].championid == 141) {
+            matchobject.redplayers[i].championname = "Kayne";
+          } else {
             continue;
           }
         }
       }
-      }
+    }
 
-      livematchaddmastery(matchobject, function(err, newmatchobject) {
-        if(err) {
-          cb(err);
-        } else {
-          cb(false, newmatchobject);
-        }
-      })
+    livematchaddmastery(matchobject, function(err, newmatchobject) {
+      if (err) {
+        cb(err);
+      } else {
+        cb(false, newmatchobject);
+      }
+    })
   });
 
 
@@ -434,55 +438,161 @@ function livematchaddchampion(matchobject, cb) {
 function livematchaddmastery(matchobject, cb) {
   //console.log(matchobject);
   var teamarray;
-  if(matchobject.team == 'RED') {
+  if (matchobject.team == 'RED') {
     teamarray = "blueplayers";
   } else {
     teamarray = "redplayers";
-}
-var loops = 0;
-  async.forEachOf(matchobject[teamarray], function(value, l, callback){
-    request(urlgetmastery + matchobject[teamarray][l].summonerid + "?api_key=" + lol_api , function(error, response, body) {
+  }
+  var loops = 0;
+  async.forEachOf(matchobject[teamarray], function(value, l, callback) {
+    request(urlgetmastery + matchobject[teamarray][l].summonerid + "?api_key=" + lol_api, function(error, response, body) {
       if (response.statusCode == 503) {
         cb('Riot ddragon servers down! Check the riot api discord server. ** 503 response code **');
-      } else if(response.statusCode == 404) {
+      } else if (response.statusCode == 404) {
         cb('404 in urlgetmastery link');
       } else if (!error && response.statusCode == 200) {
-        console.log('inside loop');
         var importedJSON = JSON.parse(body);
 
-        if(importedJSON[0].championId == matchobject[teamarray][l].championid) {
+        if (importedJSON[0].championId == matchobject[teamarray][l].championid) {
           matchobject[teamarray][l].mostplayed = true;
-          console.log('mastery success');
         }
-        for(var j = 0; j < 10; j++ ) {
-          if(importedJSON[j].championId == matchobject[teamarray][l].championid) {
+        for (var j = 0; j < 10; j++) {
+          if (importedJSON[j].championId == matchobject[teamarray][l].championid) {
             matchobject[teamarray][l].masterypoints = importedJSON[j].championPoints;
-            console.log('mastery success2');
             break;
           }
         }
         loops++;
-        if(loops == matchobject[teamarray].length) {
+        if (loops == matchobject[teamarray].length) {
           livematchaddrank(matchobject, function(err, newmatchobject) {
-            console.log('DONE');
-              if(err) {
-                cb(err);
-              } else {
-                cb(false, newmatchobject);
-              }
-            });
+            if (err) {
+              cb(err);
+            } else {
+              cb(false, newmatchobject);
+            }
+          });
         }
-      callback();
+        callback();
       }
     });
 
   });
 
-  }
+}
 
 
 function livematchaddrank(matchobject, cb) {
-  console.log(matchobject);
+  var teamarray;
+  var otherarray;
+  if (matchobject.team == 'RED') {
+    teamarray = "blueplayers";
+    otherarray = "redplayers";
+  } else {
+    teamarray = "redplayers";
+    otherarray = "blueplayers";
+  }
+  var loops = 0;
+  async.forEachOf(matchobject[teamarray], function(value, l, callback) {
+
+    request(urlgetrank + matchobject[teamarray][l].summonerid + "?api_key=" + lol_api, function(error, response, body) {
+      if (response.statusCode == 503) {
+        cb('Riot ddragon servers down! Check the riot api discord server. ** 503 response code **');
+      } else if (response.statusCode == 404) {
+        cb('404 in urlgetrank link');
+      } else if (!error && response.statusCode == 200) {
+        var importedJSON = JSON.parse(body);
+        for (var i = 0; i < importedJSON.length; i++) {
+          if (matchobject.gametype == 'Ranked Solo' && importedJSON[i].queueType == 'RANKED_SOLO_5x5') {
+            matchobject[teamarray][l].tier = importedJSON[i].tier;
+            matchobject[teamarray][l].rank = importedJSON[i].rank;
+            matchobject[teamarray][l].wins = importedJSON[i].wins;
+            matchobject[teamarray][l].losses = importedJSON[i].losses;
+            matchobject[teamarray][l].hotStreak = importedJSON[i].hotStreak;
+            break;
+          } else if (matchobject.gametype == 'Ranked Flex' && importedJSON[i].queueType == 'RANKED_FLEX_SR') {
+            matchobject[teamarray][l].tier = importedJSON[i].tier;
+            matchobject[teamarray][l].rank = importedJSON[i].rank;
+            matchobject[teamarray][l].wins = importedJSON[i].wins;
+            matchobject[teamarray][l].losses = importedJSON[i].losses;
+            matchobject[teamarray][l].hotStreak = importedJSON[i].hotStreak;
+            break;
+          } else {
+            matchobject[teamarray][l].tier = "Pre level 30 or doesn't play ranked";
+            matchobject[teamarray][l].rank = "";
+            matchobject[teamarray][l].wins = 0;
+            matchobject[teamarray][l].losses = 1;
+            matchobject[teamarray][l].hotStreak = false;
+          }
+        }
+        if (importedJSON.length = 0) {
+          matchobject[teamarray][l].tier = "Pre level 30 or doesn't play ranked";
+          matchobject[teamarray][l].rank = "";
+          matchobject[teamarray][l].wins = 0;
+          matchobject[teamarray][l].losses = 1;
+          matchobject[teamarray][l].hotStreak = false;
+        }
+        loops++;
+        var loops1 = 0;
+        if (loops == matchobject[teamarray].length) {
+          teamarray = otherarray;
+          async.forEachOf(matchobject[teamarray], function(value, j, callback) {
+
+            request(urlgetrank + matchobject[teamarray][j].summonerid + "?api_key=" + lol_api, function(error, response, body) {
+              if (response.statusCode == 503) {
+                cb('Riot ddragon servers down! Check the riot api discord server. ** 503 response code **');
+              } else if (response.statusCode == 404) {
+                cb('404 in urlgetrank link');
+              } else if (!error && response.statusCode == 200) {
+                var importedJSON = JSON.parse(body);
+                for (var i = 0; i < importedJSON.length; i++) {
+                  if (matchobject.gametype == 'Ranked Solo' && importedJSON[i].queueType == 'RANKED_SOLO_5x5') {
+                    matchobject[teamarray][j].tier = importedJSON[i].tier;
+                    matchobject[teamarray][j].rank = importedJSON[i].rank;
+                    matchobject[teamarray][j].wins = importedJSON[i].wins;
+                    matchobject[teamarray][j].losses = importedJSON[i].losses;
+                    matchobject[teamarray][j].hotStreak = importedJSON[i].hotStreak;
+                    break;
+                  } else if (matchobject.gametype == 'Ranked Flex' && importedJSON[i].queueType == 'RANKED_FLEX_SR') {
+                    matchobject[teamarray][j].tier = importedJSON[i].tier;
+                    matchobject[teamarray][j].rank = importedJSON[i].rank;
+                    matchobject[teamarray][j].wins = importedJSON[i].wins;
+                    matchobject[teamarray][j].losses = importedJSON[i].losses;
+                    matchobject[teamarray][j].hotStreak = importedJSON[i].hotStreak;
+                    break;
+                  } else {
+                    matchobject[teamarray][j].tier = "Pre level 30 or doesn't play ranked";
+                    matchobject[teamarray][j].rank = "";
+                    matchobject[teamarray][j].wins = 0;
+                    matchobject[teamarray][j].losses = 1;
+                    matchobject[teamarray][j].hotStreak = false;
+                  }
+                }
+                if (importedJSON.length = 0) {
+                  matchobject[teamarray][j].tier = "Pre level 30 or doesn't play ranked";
+                  matchobject[teamarray][j].rank = "";
+                  matchobject[teamarray][j].wins = 0;
+                  matchobject[teamarray][j].losses = 1;
+                  matchobject[teamarray][j].hotStreak = false;
+                }
+                loops1++;
+                if (loops1 == matchobject[teamarray].length) {
+                  cb(false, matchobject);
+                }
+                callback();
+
+              }
+            });
+
+          });
+
+
+        }
+        callback();
+      }
+    });
+
+  });
+
 }
 
 function saveitemphotos(fitems_h, fitems_w, sitems_h, sitems_w, cb) {
@@ -520,10 +630,10 @@ function saveImages(array, cb) {
         throw err
 
       })
-      key++;
-      if(key == max) {
-        cb();
-      }
+    key++;
+    if (key == max) {
+      cb();
+    }
   }
 
 }
@@ -706,4 +816,65 @@ function printbuild(message, args, championggobject) {
     file: 'C:/jeff/Kennen-bot/winratestart.jpg'
   });
 
+}
+
+function matchmessage(message, matchobject, summonerobject) {
+  var teamarray;
+  var yourarray;
+  if (matchobject.team == 'RED') {
+    teamarray = "blueplayers";
+    yourarray = "redplayers";
+  } else {
+    teamarray = "redplayers";
+    yourarray = "blueplayers";
+  }
+  var enemyteam = "";
+  var yourteam = "";
+  for (var i = 0; i < matchobject[teamarray].length; i++) {
+    var num = matchobject[teamarray][i].wins/(matchobject[teamarray][i].losses + matchobject[teamarray][i].wins);
+    var winrate = roundTo( num , 2);
+    enemyteam += "**" + matchobject[teamarray][i].summonername + "** ----- **" + matchobject[teamarray][i].championname + "**" + " ----- Rank: **" + matchobject[teamarray][i].tier + " " + matchobject[teamarray][i].rank + " ** ----- Winrate: **" + winrate + "%**\n";
+  }
+  for (var i = 0; i < matchobject[yourarray].length; i++) {
+    var num = matchobject[yourarray][i].wins/( matchobject[yourarray][i].losses + matchobject[yourarray][i].wins);
+    var winrate = roundTo(num , 2);
+    yourteam += "**" + matchobject[yourarray][i].summonername + "** ----- **" + matchobject[yourarray][i].championname + "**" + " ----- Rank: **" + matchobject[yourarray][i].tier + " " + matchobject[yourarray][i].rank + " ** ----- Winrate: **" + winrate + "%**\n";
+  }
+  var watchout = "";
+  var mains = "These players are playing their main: ";
+  var mastery = "These players have >50000 mastery points on their champ: ";
+  for (var i = 0; i < matchobject[teamarray].length; i ++ ) {
+    if(matchobject[teamarray][i].mostplayed) {
+      mains += "** " + matchobject[teamarray][i].summonername + "**(** " + matchobject[teamarray][i].championname + "**), ";
+    } else if (matchobject[teamarray][i].masterypoints > 50000) {
+      mastery += "** " + matchobject[teamarray][i].summonername + "**(** " + matchobject[teamarray][i].championname + "**), ";
+    }
+  }
+
+  watchout += mains + "\n" + mastery;
+
+  var highranks= "";
+  for (var i = 0; i < matchobject[teamarray].length; i ++ ) {
+    if(matchobject[teamarray][i].tier == "PLATINUM" || matchobject[teamarray][i].tier == "DIAMOND" || matchobject[teamarray][i].tier == "MASTER" || matchobject[teamarray][i].tier == "CHALLENGER"){
+      highranks += "**" + matchobject[teamarray][i].summonername + "**(** " + matchobject[teamarray][i].championname + "**), ";
+    }
+
+  }
+
+
+
+  const embed = new Discord.RichEmbed()
+    .setTitle('Live Match Info for **' + summonerobject.name + "**")
+    .setAuthor(summonerobject.name, "http://ddragon.leagueoflegends.com/cdn/6.24.1/img/profileicon/" + summonerobject.profileid + ".png")
+    .setDescription(matchobject.gametype + " on " + matchobject.map + " **" + matchobject.time + " **in game")
+    .addField("Enemy Team", enemyteam)
+    .addField("Your Team", yourteam)
+    .addField("Enemy Players to Watch", watchout)
+    .addField("High Ranked Enemy Players", highranks)
+    .setColor(12717994)
+
+
+  message.channel.send({
+    embed
+  });
 }
