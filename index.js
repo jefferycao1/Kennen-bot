@@ -7,6 +7,7 @@ const json = require('json-object').setup(global);
 const download = require('image-downloader');
 const roundTo = require('round-to');
 const async = require('async');
+const urlencode = require('urlencode');
 
 var config = JSON.parse(fs.readFileSync('./settings.json', 'utf-8'));
 const options = {
@@ -145,6 +146,9 @@ client.on('message', function(message) {
       embed
     });
 
+  } else if (mess.startsWith(prefix + 'test')) {
+    console.log(args);
+    message.reply(args);
   }
 });
 
@@ -272,7 +276,7 @@ function getchampionID(championname, cb) {
 }
 
 function getsummonerid(summoner, cb) {
-  request(urlsummonerid + summoner + "?api_key=" + lol_api, function(error, response, body) {
+  request(urlsummonerid + urlencode(summoner) + "?api_key=" + lol_api, function(error, response, body) {
     if (error || response.statusCode == 403) {
       cb('expired apikey! ** 403 response code **');
       return;
@@ -510,23 +514,32 @@ function livematchaddrank(matchobject, cb) {
             matchobject[teamarray][l].losses = importedJSON[i].losses;
             matchobject[teamarray][l].hotStreak = importedJSON[i].hotStreak;
             break;
-          } else if (matchobject.gametype == 'Ranked Flex' && importedJSON[i].queueType == 'RANKED_FLEX_SR') {
+          }
+          if (matchobject.gametype == 'Ranked Flex' && importedJSON[i].queueType == 'RANKED_FLEX_SR') {
             matchobject[teamarray][l].tier = importedJSON[i].tier;
             matchobject[teamarray][l].rank = importedJSON[i].rank;
             matchobject[teamarray][l].wins = importedJSON[i].wins;
             matchobject[teamarray][l].losses = importedJSON[i].losses;
             matchobject[teamarray][l].hotStreak = importedJSON[i].hotStreak;
             break;
-          } else {
-            matchobject[teamarray][l].tier = "Pre level 30 or doesn't play ranked";
+          } else if(importedJSON[i].queueType == 'RANKED_SOLO_5x5') {
+            matchobject[teamarray][l].tier = importedJSON[i].tier;
+            matchobject[teamarray][l].rank = importedJSON[i].rank;
+            matchobject[teamarray][l].wins = importedJSON[i].wins;
+            matchobject[teamarray][l].losses = importedJSON[i].losses;
+            matchobject[teamarray][l].hotStreak = importedJSON[i].hotStreak;
+            break;
+          }
+            else {
+            matchobject[teamarray][l].tier = "UNRANKED";
             matchobject[teamarray][l].rank = "";
             matchobject[teamarray][l].wins = 0;
             matchobject[teamarray][l].losses = 1;
             matchobject[teamarray][l].hotStreak = false;
           }
         }
-        if (importedJSON.length = 0) {
-          matchobject[teamarray][l].tier = "Pre level 30 or doesn't play ranked";
+        if (importedJSON.length == 0) {
+          matchobject[teamarray][l].tier = "UNRANKED";
           matchobject[teamarray][l].rank = "";
           matchobject[teamarray][l].wins = 0;
           matchobject[teamarray][l].losses = 1;
@@ -553,7 +566,15 @@ function livematchaddrank(matchobject, cb) {
                     matchobject[teamarray][j].losses = importedJSON[i].losses;
                     matchobject[teamarray][j].hotStreak = importedJSON[i].hotStreak;
                     break;
-                  } else if (matchobject.gametype == 'Ranked Flex' && importedJSON[i].queueType == 'RANKED_FLEX_SR') {
+                  }
+                  if (matchobject.gametype == 'Ranked Flex' && importedJSON[i].queueType == 'RANKED_FLEX_SR') {
+                    matchobject[teamarray][j].tier = importedJSON[i].tier;
+                    matchobject[teamarray][j].rank = importedJSON[i].rank;
+                    matchobject[teamarray][j].wins = importedJSON[i].wins;
+                    matchobject[teamarray][j].losses = importedJSON[i].losses;
+                    matchobject[teamarray][j].hotStreak = importedJSON[i].hotStreak;
+                    break;
+                  } else if(importedJSON[i].queueType == 'RANKED_SOLO_5x5') {
                     matchobject[teamarray][j].tier = importedJSON[i].tier;
                     matchobject[teamarray][j].rank = importedJSON[i].rank;
                     matchobject[teamarray][j].wins = importedJSON[i].wins;
@@ -561,15 +582,15 @@ function livematchaddrank(matchobject, cb) {
                     matchobject[teamarray][j].hotStreak = importedJSON[i].hotStreak;
                     break;
                   } else {
-                    matchobject[teamarray][j].tier = "Pre level 30 or doesn't play ranked";
+                    matchobject[teamarray][j].tier = "UNRANKED";
                     matchobject[teamarray][j].rank = "";
                     matchobject[teamarray][j].wins = 0;
                     matchobject[teamarray][j].losses = 1;
                     matchobject[teamarray][j].hotStreak = false;
                   }
                 }
-                if (importedJSON.length = 0) {
-                  matchobject[teamarray][j].tier = "Pre level 30 or doesn't play ranked";
+                if (importedJSON.length == 0) {
+                  matchobject[teamarray][j].tier = "UNRANKED";
                   matchobject[teamarray][j].rank = "";
                   matchobject[teamarray][j].wins = 0;
                   matchobject[teamarray][j].losses = 1;
@@ -833,13 +854,17 @@ function matchmessage(message, matchobject, summonerobject) {
   var yourteam = "";
   for (var i = 0; i < matchobject[teamarray].length; i++) {
     var num = matchobject[teamarray][i].wins / (matchobject[teamarray][i].losses + matchobject[teamarray][i].wins);
+    var wongames = matchobject[teamarray][i].wins;
+    var lostgames = matchobject[teamarray][i].losses;
     var winrate = roundTo(num, 2);
-    enemyteam += "**" + matchobject[teamarray][i].summonername + "** ----- **" + matchobject[teamarray][i].championname + "**" + " ----- Rank: **" + matchobject[teamarray][i].tier + " " + matchobject[teamarray][i].rank + " ** ----- Winrate: **" + winrate + "%**\n";
+    enemyteam += "**" + matchobject[teamarray][i].summonername + "** ----- **" + matchobject[teamarray][i].championname + "**" + " ----- Rank: **" + matchobject[teamarray][i].tier + " " + matchobject[teamarray][i].rank + " ** ----- Winrate: **" + winrate*100 + "%**(" + wongames + "W, " +  lostgames + "L)\n";
   }
   for (var i = 0; i < matchobject[yourarray].length; i++) {
     var num = matchobject[yourarray][i].wins / (matchobject[yourarray][i].losses + matchobject[yourarray][i].wins);
     var winrate = roundTo(num, 2);
-    yourteam += "**" + matchobject[yourarray][i].summonername + "** ----- **" + matchobject[yourarray][i].championname + "**" + " ----- Rank: **" + matchobject[yourarray][i].tier + " " + matchobject[yourarray][i].rank + " ** ----- Winrate: **" + winrate + "%**\n";
+    var wongames = matchobject[yourarray][i].wins;
+    var lostgames = matchobject[yourarray][i].losses;
+    yourteam += "**" + matchobject[yourarray][i].summonername + "** ----- **" + matchobject[yourarray][i].championname + "**" + " ----- Rank: **" + matchobject[yourarray][i].tier + " " + matchobject[yourarray][i].rank + " ** ----- Winrate: **" + winrate*100 + "%**(" + wongames + "W, " +  lostgames + "L)\n";
   }
   var watchout = "";
   var mains = "These players are playing their main: ";
@@ -847,31 +872,30 @@ function matchmessage(message, matchobject, summonerobject) {
   for (var i = 0; i < matchobject[teamarray].length; i++) {
     if (matchobject[teamarray][i].mostplayed) {
       mains += "** " + matchobject[teamarray][i].summonername + "**(** " + matchobject[teamarray][i].championname + "**), ";
-    } else if (matchobject[teamarray][i].masterypoints > 50000) {
+    }
+    if (matchobject[teamarray][i].masterypoints > 50000) {
       mastery += "** " + matchobject[teamarray][i].summonername + "**(** " + matchobject[teamarray][i].championname + "**), ";
     }
   }
 
   watchout += mains + "\n" + mastery;
 
-  var highranks = "";
+  var highranks = "Diamond or higher:";
   for (var i = 0; i < matchobject[teamarray].length; i++) {
-    if (matchobject[teamarray][i].tier == "PLATINUM" || matchobject[teamarray][i].tier == "DIAMOND" || matchobject[teamarray][i].tier == "MASTER" || matchobject[teamarray][i].tier == "CHALLENGER") {
+    if (matchobject[teamarray][i].tier == "DIAMOND" || matchobject[teamarray][i].tier == "MASTER" || matchobject[teamarray][i].tier == "CHALLENGER") {
       highranks += "**" + matchobject[teamarray][i].summonername + "**(** " + matchobject[teamarray][i].championname + "**), ";
     }
 
   }
 
-
-
   const embed = new Discord.RichEmbed()
     .setTitle('Live Match Info for **' + summonerobject.name + "**")
     .setAuthor(summonerobject.name, "http://ddragon.leagueoflegends.com/cdn/6.24.1/img/profileicon/" + summonerobject.profileid + ".png")
     .setDescription(matchobject.gametype + " on " + matchobject.map + " **" + matchobject.time + " **in game")
-    .addField("Enemy Team", enemyteam, true)
-    .addField("Your Team", yourteam, true)
-    .addField("Enemy Players to Watch", watchout, true)
-    .addField("High Ranked Enemy Players", highranks, true)
+    .addField("Enemy Team", enemyteam)
+    .addField("Your Team", yourteam)
+    .addField("Enemy Players to Watch", watchout)
+    .addField("High Ranked Enemy Players", highranks)
     .setColor(12717994)
 
 
