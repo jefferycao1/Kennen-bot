@@ -830,20 +830,16 @@ function matchmessage(message, matchobject, summonerobject) {
     yourarray = "blueplayers";
   }
   var enemyteam = "";
-  var enemyteam2 = "";
   var yourteam = "";
-  var yourteam2 = "";
   for (var i = 0; i < matchobject[teamarray].length; i++) {
     var num = matchobject[teamarray][i].wins / (matchobject[teamarray][i].losses + matchobject[teamarray][i].wins);
     var winrate = roundTo(num, 2);
-    enemyteam += "**" + matchobject[teamarray][i].summonername + "** - **" + matchobject[teamarray][i].championname + "**";
-    enemyteam2+= "Rank: **" + matchobject[teamarray][i].tier + " " + matchobject[teamarray][i].rank + " ** - Winrate: **" + winrate + "%**\n";
+    enemyteam += "**" + matchobject[teamarray][i].summonername + "** ----- **" + matchobject[teamarray][i].championname + "**" + " ----- Rank: **" + matchobject[teamarray][i].tier + " " + matchobject[teamarray][i].rank + " ** ----- Winrate: **" + winrate + "%**\n";
   }
   for (var i = 0; i < matchobject[yourarray].length; i++) {
     var num = matchobject[yourarray][i].wins / (matchobject[yourarray][i].losses + matchobject[yourarray][i].wins);
     var winrate = roundTo(num, 2);
-    yourteam += "**" + matchobject[yourarray][i].summonername + "** - **" + matchobject[yourarray][i].championname + "**";
-    yourteam2 += "Rank: **" + matchobject[yourarray][i].tier + " " + matchobject[yourarray][i].rank + " ** - Winrate: **" + winrate + "%**\n";
+    yourteam += "**" + matchobject[yourarray][i].summonername + "** ----- **" + matchobject[yourarray][i].championname + "**" + " ----- Rank: **" + matchobject[yourarray][i].tier + " " + matchobject[yourarray][i].rank + " ** ----- Winrate: **" + winrate + "%**\n";
   }
   var watchout = "";
   var mains = "These players are playing their main: ";
@@ -867,50 +863,19 @@ function matchmessage(message, matchobject, summonerobject) {
   }
 
 
+
+  const embed = new Discord.RichEmbed()
+    .setTitle('Live Match Info for **' + summonerobject.name + "**")
+    .setAuthor(summonerobject.name, "http://ddragon.leagueoflegends.com/cdn/6.24.1/img/profileicon/" + summonerobject.profileid + ".png")
+    .setDescription(matchobject.gametype + " on " + matchobject.map + " **" + matchobject.time + " **in game")
+    .addField("Enemy Team", enemyteam, true)
+    .addField("Your Team", yourteam, true)
+    .addField("Enemy Players to Watch", watchout, true)
+    .addField("High Ranked Enemy Players", highranks, true)
+    .setColor(12717994)
+
+
   message.channel.send({
-  "embed": {
-    "title": "Live Match Info for **" + summonerobject.name + "**",
-    "description": matchobject.gametype + " on " + matchobject.map + " **" + matchobject.time + " **in game",
-    "color": 12717994,
-    "thumbnail": {
-      "url": "http://i.imgur.com/xNLs83T.png"
-    },
-    "author": {
-      "name": summonerobject.name,
-      "icon_url": "http://ddragon.leagueoflegends.com/cdn/6.24.1/img/profileicon/" + summonerobject.profileid + ".png"
-    },
-    "fields": [
-
-      {
-        "name": "Enemy Team",
-        "value": enemyteam,
-        "inline": true
-      },
-      {
-        "name": "-",
-        "value": enemyteam2,
-        "inline": true
-      },
-      {
-        "name": "Your Team",
-        "value": yourteam,
-        "inline": true
-      },
-      {
-        "name": "-",
-        "value": yourteam2,
-        "inline": true
-      },
-      {
-        "name": "Enemy Players to Watch",
-        "value":  watchout + "\n "
-      },
-      {
-        "name": "High Ranked Enemy Players",
-        "value":  highranks
-      }
-
-    ]
-  }
-});
+    embed
+  });
 }
