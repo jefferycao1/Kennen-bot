@@ -852,19 +852,19 @@ function matchmessage(message, matchobject, summonerobject) {
   }
   var enemyteam = "";
   var yourteam = "";
+  var enemyteam2 = "";
+  var yourteam2 = "";
   for (var i = 0; i < matchobject[teamarray].length; i++) {
-    var num = matchobject[teamarray][i].wins / (matchobject[teamarray][i].losses + matchobject[teamarray][i].wins);
-    var wongames = matchobject[teamarray][i].wins;
-    var lostgames = matchobject[teamarray][i].losses;
-    var winrate = roundTo(num, 2);
-    enemyteam += "**" + matchobject[teamarray][i].summonername + "** ----- **" + matchobject[teamarray][i].championname + "**" + " ----- Rank: **" + matchobject[teamarray][i].tier + " " + matchobject[teamarray][i].rank + " ** ----- Winrate: **" + winrate*100 + "%**(" + wongames + "W, " +  lostgames + "L)\n";
-  }
+     var num = matchobject[teamarray][i].wins / (matchobject[teamarray][i].losses + matchobject[teamarray][i].wins);
+     var winrate = roundTo(num * 100, 2);
+     enemyteam += "**" + matchobject[teamarray][i].summonername + "** - **" + matchobject[teamarray][i].championname + "**\n";
+     enemyteam2+= "Rank: **" + matchobject[teamarray][i].tier + " " + matchobject[teamarray][i].rank + " ** - Winrate: **" + winrate + "%**" + " (" + matchobject[teamarray][i].wins + "W," + matchobject[teamarray][i].losses + "L)\n";
+   }
   for (var i = 0; i < matchobject[yourarray].length; i++) {
     var num = matchobject[yourarray][i].wins / (matchobject[yourarray][i].losses + matchobject[yourarray][i].wins);
-    var winrate = roundTo(num, 2);
-    var wongames = matchobject[yourarray][i].wins;
-    var lostgames = matchobject[yourarray][i].losses;
-    yourteam += "**" + matchobject[yourarray][i].summonername + "** ----- **" + matchobject[yourarray][i].championname + "**" + " ----- Rank: **" + matchobject[yourarray][i].tier + " " + matchobject[yourarray][i].rank + " ** ----- Winrate: **" + winrate*100 + "%**(" + wongames + "W, " +  lostgames + "L)\n";
+    var winrate = roundTo(num* 100, 2);
+    yourteam += "**" + matchobject[yourarray][i].summonername + "** - **" + matchobject[yourarray][i].championname + "**\n";
+    yourteam2 += "Rank: **" + matchobject[yourarray][i].tier + " " + matchobject[yourarray][i].rank + " ** - Winrate: **" + winrate + "%**" + " (" + matchobject[teamarray][i].wins + "W," + matchobject[teamarray][i].losses + "L)\n";
   }
   var watchout = "";
   var mains = "These players are playing their main: ";
@@ -888,18 +888,47 @@ function matchmessage(message, matchobject, summonerobject) {
 
   }
 
-  const embed = new Discord.RichEmbed()
-    .setTitle('Live Match Info for **' + summonerobject.name + "**")
-    .setAuthor(summonerobject.name, "http://ddragon.leagueoflegends.com/cdn/6.24.1/img/profileicon/" + summonerobject.profileid + ".png")
-    .setDescription(matchobject.gametype + " on " + matchobject.map + " **" + matchobject.time + " **in game")
-    .addField("Enemy Team", enemyteam)
-    .addField("Your Team", yourteam)
-    .addField("Enemy Players to Watch", watchout)
-    .addField("High Ranked Enemy Players", highranks)
-    .setColor(12717994)
-
-
   message.channel.send({
-    embed
-  });
+  "embed": {
+    "title": "Live Match Info for **" + summonerobject.name + "**",
+    "description": matchobject.gametype + " on " + matchobject.map + " **" + matchobject.time + " **in game",
+    "color": 12717994,
+    "author": {
+      "name": summonerobject.name,
+      "icon_url": "http://ddragon.leagueoflegends.com/cdn/6.24.1/img/profileicon/" + summonerobject.profileid + ".png"
+    },
+    "fields": [
+
+      {
+        "name": "Enemy Team",
+        "value": enemyteam,
+        "inline": true
+      },
+      {
+        "name": "-",
+        "value": enemyteam2,
+        "inline": true
+      },
+      {
+        "name": "Your Team",
+        "value": yourteam,
+        "inline": true
+      },
+      {
+        "name": "-",
+        "value": yourteam2,
+        "inline": true
+      },
+      {
+        "name": "Enemy Players to Watch",
+        "value":  watchout + "\n "
+      },
+      {
+        "name": "High Ranked Enemy Players",
+        "value":  highranks
+      }
+
+    ]
+  }
+});
 }
