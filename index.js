@@ -31,6 +31,7 @@ const urlgetchamp = "http://ddragon.leagueoflegends.com/cdn/6.24.1/data/en_US/ch
 const urlgetmastery = "https://na1.api.riotgames.com/lol/champion-mastery/v3/champion-masteries/by-summoner/";
 const urlgetrank = "https://na1.api.riotgames.com/lol/league/v3/positions/by-summoner/";
 const urlrunes = "http://ddragon.leagueoflegends.com/cdn/6.24.1/data/en_US/rune.json";
+const urlmasteries = "http://ddragon.leagueoflegends.com/cdn/6.24.1/data/en_US/mastery.json";
 
 var queuearray = {
   '0': 'Custom',
@@ -71,6 +72,18 @@ var mapname = {
   '14': `Butcher's Bridge`,
   '16': 'Cosmic Ruins'
 };
+
+var keystonemastery = {
+  '6161': `Warlord's Bloodlust`,
+  '6162': 'Fervor of Battle',
+  '6164': 'Deathfire Touch',
+  '6361': `Stormraider's Surge`,
+  '6362': `Thunderlord's Decree`,
+  '6363': `Windspeaker's Blessing`,
+  '6261': 'Grasp of the Undying',
+  '6262': 'Courage of the Colossus',
+  '6263': 'Bond of Stone'
+}
 
 client.login(discord_token);
 
@@ -205,6 +218,10 @@ function getbuild(champid, argstwo, cb) {
         var finalitemswin = championobject.hashes.finalitemshashfixed.highestWinrate;
         var startingitemshigh = championobject.hashes.firstitemshash.highestCount;
         var startingitemswin = championobject.hashes.firstitemshash.highestWinrate;
+        var highmasteries = championobject.hashes.masterieshash.highestCount;
+        var winmasteries = championobject.hashes.masterieshash.highestWinrate;
+        var highskill = championobject.hashes.skillorderhash.highestCount;
+        var winskill = championobject.hashes.skillorderhash.highestWinrate;
         var championggobject = {
           finalitemshighgames: finalitemshigh.count,
           finalitemshighwinrate: finalitemshigh.winrate,
@@ -214,7 +231,16 @@ function getbuild(champid, argstwo, cb) {
           startingitemshighwinrate: startingitemshigh.winrate,
           startingitemswingames: startingitemswin.count,
           startingitemswinwinrate: startingitemswin.winrate,
-          role: championobject.role
+          role: championobject.role,
+          highmasteries: highmasteries,
+          winmasteries: winmasteries,
+          highskill: highskill,
+          winskill: winskill,
+          winrate: championobject.winRate,
+          playrate: championobject.playRate,
+          gamesplayed: championobject.gamesPlayed,
+          percentroleplayed: championobject.percentRolePlayed,
+          banrate: championobject.banRate
         }
         console.log('success');
         saveitemphotos(finalitemshigh, finalitemswin, startingitemshigh, startingitemswin, function() {
@@ -349,7 +375,12 @@ function matchinfo(livematchobject, summonerobject, cb) {
   second = roundTo(second, 0);
   minute = roundTo(minute, 0);
   hour = roundTo(hour, 0);
-  time = hour + " hours, " + minute + " minutes and " + second + " seconds";
+  if(hour > 100) {
+    time = "Loading into";
+  } else {
+    time = hour + " hours, " + minute + " minutes and " + second + " seconds";
+  }
+
   var players = livematchobject.participants;
   var blueplayers = [];
   var redplayers = [];
@@ -814,7 +845,7 @@ function test(message) {
 
 function getrunestring(yourarray, matchobject, summonerobject, cb) {
   var runeobject;
-  var rune = "";
+  var rune = "Runes for **" + summonerobject.name + "**:\n";
 
   for (var i = 0; i < matchobject[yourarray].length; i++) {
     if (matchobject[yourarray][i].summonerid == summonerobject.summonerid) {
@@ -844,6 +875,85 @@ function getrunestring(yourarray, matchobject, summonerobject, cb) {
   });
 }
 
+function printskillorder(championggobject, cb) {
+
+  var highskillwr = roundTo(championggobject.highskill.winrate * 100, 2);
+  var winskillwr = roundTo(championggobject.winskill.winrate * 100, 2);
+  var highskill = "Highest Play-Rate Skill Order: \n**" + championggobject.highskill.hash + "** (" + championggobject.highskill.count + " games, winrate: " + highskillwr + "%)";
+  var winskill = "Highest Win-Rate Skill Order: \n**" + championggobject.winskill.hash+ "** (" + championggobject.winskill.count + " games, winrate: " + winskillwr + "%)";
+  var string = highskill + "\n" + winskill + "\n";
+  request(urlmasteries, function(error, response, body) {
+    if (response.statusCode == 503) {
+      cb('Riot ddragon servers down! Check the riot api discord server. ** 503 response code **');
+    } else if (!error && response.statusCode == 200) {
+      var ferocitynum = 0;
+      var cunningnum = 0;
+      var resolvenum = 0;
+      var importedJSON = JSON.parse(body);
+      var mastery = championggobject.highmasteries.hash.split('-');
+      var ferocityarray = importedJSON.tree.Ferocity;
+      var cunningarray = importedJSON.tree.Cunning;
+      var resolvearray = importedJSON.tree.Resolve;
+      var keystone = "";
+      var found = false;
+      var message = "";
+      for (var i = 0; i < mastery.length; i+= 2) {
+        found = false;
+        for (var a = 0; a < ferocityarray.length; a ++) {
+          if(!found) {
+            for(var b = 0; b < ferocityarray[a].length; b++) {
+              if(mastery[i] == ferocityarray[a][b].masteryId) {
+                ferocitynum += parseInt(mastery[i+1]);
+                found = true;
+                break;
+              }
+            }
+          }
+          else {
+            break;
+          }
+        }
+        for (var c = 0; c < cunningarray.length; c ++) {
+          if(!found) {
+            for(var d = 0; d < cunningarray[c].length; d++) {
+              if(mastery[i] == cunningarray[c][d].masteryId) {
+                cunningnum += parseInt(mastery[i+1]);
+                found = true;
+                break;
+              }
+            }
+          }
+          else {
+            break;
+          }
+        }
+        for (var e = 0; e < resolvearray.length; e ++) {
+          if(!found) {
+            for(var f = 0; b < resolvearray[e].length; f++) {
+              if(mastery[i] == resolvearray[e][f].masteryId) {
+                resolvenum += parseInt(mastery[i+1]);
+                found = true;
+                break;
+              }
+            }
+          }
+          else {
+            break;
+          }
+        }
+        if(i == mastery.length - 2) {
+          console.log(mastery[i]);
+          console.log(i);
+          keystone = keystonemastery[mastery[i]];
+        }
+      }
+      message = "Masteries: \n**" + ferocitynum + "-" + cunningnum + "-" + resolvenum + " **KEYSTONE: **" + keystone + "**";
+      string += message;
+      cb(string);
+    }
+  });
+}
+
 function printbuild(message, args, championggobject) {
   message.reply("the builds for **" + args + " **" + "in the **" + championggobject.role + "** lane from champion.gg");
   message.channel.send("**Highest Play-Rate Build**" + " (number of games: **" + championggobject.finalitemshighgames + "** , winrate: **" + championggobject.finalitemshighwinrate.toFixed(2) + "**% )", {
@@ -858,6 +968,11 @@ function printbuild(message, args, championggobject) {
   });
   message.channel.send("**Highest Win-Rate Starting Items**" + " (number of games: **" + championggobject.startingitemswingames + "** , winrate: **" + championggobject.startingitemswinwinrate.toFixed(2) + "**% )", {
     file: 'C:/jeff/Kennen-bot/winratestart.jpg'
+  });
+  console.log(championggobject);
+  printskillorder(championggobject, function(string) {
+    console.log(string);
+    message.channel.send(string);
   });
 
 }
