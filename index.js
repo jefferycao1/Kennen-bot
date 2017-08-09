@@ -1011,10 +1011,10 @@ function matchmessage(message, matchobject, summonerobject) {
   var mastery = "These players have >50000 mastery points on their champ: ";
   for (var i = 0; i < matchobject[teamarray].length; i++) {
     if (matchobject[teamarray][i].mostplayed) {
-      mains += "** " + matchobject[teamarray][i].summonername + "**(** " + matchobject[teamarray][i].championname + "**), ";
+      mains += "** " + matchobject[teamarray][i].summonername + " **(**" + matchobject[teamarray][i].championname + "**), ";
     }
     if (matchobject[teamarray][i].masterypoints > 50000) {
-      mastery += "** " + matchobject[teamarray][i].summonername + "**(** " + matchobject[teamarray][i].championname + ", " + matchobject[teamarray][i].masterypoints + "pts**), ";
+      mastery += "** " + matchobject[teamarray][i].summonername + "** (**" + matchobject[teamarray][i].championname + ", " + matchobject[teamarray][i].masterypoints + "pts**), ";
     }
   }
 
@@ -1023,7 +1023,7 @@ function matchmessage(message, matchobject, summonerobject) {
   var highranks = "Diamond or higher:";
   for (var i = 0; i < matchobject[teamarray].length; i++) {
     if (matchobject[teamarray][i].tier == "DIAMOND" || matchobject[teamarray][i].tier == "MASTER" || matchobject[teamarray][i].tier == "CHALLENGER") {
-      highranks += "**" + matchobject[teamarray][i].summonername + "**(** " + matchobject[teamarray][i].championname + "**),";
+      highranks += "**" + matchobject[teamarray][i].summonername + " **(**" + matchobject[teamarray][i].championname + "**),";
     }
 
   }
