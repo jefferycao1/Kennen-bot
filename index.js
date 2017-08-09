@@ -929,7 +929,7 @@ function printskillorder(championggobject, cb) {
         }
         for (var e = 0; e < resolvearray.length; e ++) {
           if(!found) {
-            for(var f = 0; b < resolvearray[e].length; f++) {
+            for(var f = 0; f < resolvearray[e].length; f++) {
               if(mastery[i] == resolvearray[e][f].masteryId) {
                 resolvenum += parseInt(mastery[i+1]);
                 found = true;
@@ -941,10 +941,13 @@ function printskillorder(championggobject, cb) {
             break;
           }
         }
-        if(i == mastery.length - 2) {
+        if(i == mastery.length - 2 || i == 12) {
           console.log(mastery[i]);
           console.log(i);
-          keystone = keystonemastery[mastery[i]];
+          if(keystonemastery[mastery[i]] != undefined) {
+            keystone = keystonemastery[mastery[i]];
+          }
+
         }
       }
       message = "Masteries: \n**" + ferocitynum + "-" + cunningnum + "-" + resolvenum + " **KEYSTONE: **" + keystone + "**";
