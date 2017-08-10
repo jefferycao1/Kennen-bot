@@ -980,7 +980,11 @@ function printskillorder(championggobject, cb) {
 }
 
 function printbuild(message, args, championggobject) {
-  message.reply("the builds for **" + args + " **" + "in the **" + championggobject.role + "** lane from champion.gg");
+  var winrate = roundTo(championggobject.winrate * 100, 2);
+  var playrate = roundTo(championggobject.playrate * 100, 2);
+  var percentroleplayed = roundTo(championggobject.percentroleplayed * 100, 2);
+  var banrate = roundTo(championggobject.banrate * 100, 2);
+  message.reply("the builds for **" + args + " **" + "in the **" + championggobject.role + "** lane from champion.gg\n**" + args + "** has a **" + winrate + "%** winrate, **" + playrate + "%** playrate, **" + percentroleplayed + "%** playrate in this lane, and a **" + banrate + "%** banrate.");
   message.channel.send("**Highest Play-Rate Build**" + " (number of games: **" + championggobject.finalitemshighgames + "** , winrate: **" + championggobject.finalitemshighwinrate.toFixed(2) + "**% )", {
     file: 'C:/jeff/Kennen-bot/playratefinal.jpg'
   });
