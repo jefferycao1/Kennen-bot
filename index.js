@@ -187,176 +187,172 @@ function getbuild(champid, argstwo, cb) {
   }
   console.log(champrole);
   request(urlinfo, function(error, response, body) {
-    if (error || response.statusCode == 403) {
-      cb('invalid champion.gg apikey!');
-      return;
-    } else if (!error && response.statusCode == 200) {
-      var importedJSON = JSON.parse(body);
-      var championobject = {};
-      var notfound = true;
-      if (champrole == "") {
-        for (var key in importedJSON) {
-          if (importedJSON[key].championId == champid) {
-            championobject = importedJSON[key];
-            notfound = false;
-            break;
+    requesterror(urlinfo, response.statusCode, function(err) {
+      if(err) {
+        cb(err);
+      } else {
+        var importedJSON = JSON.parse(body);
+        var championobject = {};
+        var notfound = true;
+        if (champrole == "") {
+          for (var key in importedJSON) {
+            if (importedJSON[key].championId == champid) {
+              championobject = importedJSON[key];
+              notfound = false;
+              break;
+            }
+          }
+        } else {
+          for (var key in importedJSON) {
+            if (importedJSON[key].championId == champid && importedJSON[key].role == champrole) {
+              championobject = importedJSON[key];
+              notfound = false;
+              break;
+            }
           }
         }
-      } else {
-        for (var key in importedJSON) {
-          if (importedJSON[key].championId == champid && importedJSON[key].role == champrole) {
-            championobject = importedJSON[key];
-            notfound = false;
-            break;
+        if (notfound) {
+          cb('can not find build for that role!');
+        } else {
+          var finalitemshigh = championobject.hashes.finalitemshashfixed.highestCount;
+          var finalitemswin = championobject.hashes.finalitemshashfixed.highestWinrate;
+          var startingitemshigh = championobject.hashes.firstitemshash.highestCount;
+          var startingitemswin = championobject.hashes.firstitemshash.highestWinrate;
+          var highmasteries = championobject.hashes.masterieshash.highestCount;
+          var winmasteries = championobject.hashes.masterieshash.highestWinrate;
+          var highskill = championobject.hashes.skillorderhash.highestCount;
+          var winskill = championobject.hashes.skillorderhash.highestWinrate;
+          var championggobject = {
+            finalitemshighgames: finalitemshigh.count,
+            finalitemshighwinrate: finalitemshigh.winrate,
+            finalitemswingames: finalitemswin.count,
+            finalitemswinwinrate: finalitemswin.winrate,
+            startingitemshighgames: startingitemshigh.count,
+            startingitemshighwinrate: startingitemshigh.winrate,
+            startingitemswingames: startingitemswin.count,
+            startingitemswinwinrate: startingitemswin.winrate,
+            role: championobject.role,
+            highmasteries: highmasteries,
+            winmasteries: winmasteries,
+            highskill: highskill,
+            winskill: winskill,
+            winrate: championobject.winRate,
+            playrate: championobject.playRate,
+            gamesplayed: championobject.gamesPlayed,
+            percentroleplayed: championobject.percentRolePlayed,
+            banrate: championobject.banRate
           }
+          console.log('success');
+          saveitemphotos(finalitemshigh, finalitemswin, startingitemshigh, startingitemswin, function() {
+            cb(false, championggobject);
+          });
         }
       }
-      if (notfound) {
-        cb('can not find build for that role!');
-      } else {
-        var finalitemshigh = championobject.hashes.finalitemshashfixed.highestCount;
-        var finalitemswin = championobject.hashes.finalitemshashfixed.highestWinrate;
-        var startingitemshigh = championobject.hashes.firstitemshash.highestCount;
-        var startingitemswin = championobject.hashes.firstitemshash.highestWinrate;
-        var highmasteries = championobject.hashes.masterieshash.highestCount;
-        var winmasteries = championobject.hashes.masterieshash.highestWinrate;
-        var highskill = championobject.hashes.skillorderhash.highestCount;
-        var winskill = championobject.hashes.skillorderhash.highestWinrate;
-        var championggobject = {
-          finalitemshighgames: finalitemshigh.count,
-          finalitemshighwinrate: finalitemshigh.winrate,
-          finalitemswingames: finalitemswin.count,
-          finalitemswinwinrate: finalitemswin.winrate,
-          startingitemshighgames: startingitemshigh.count,
-          startingitemshighwinrate: startingitemshigh.winrate,
-          startingitemswingames: startingitemswin.count,
-          startingitemswinwinrate: startingitemswin.winrate,
-          role: championobject.role,
-          highmasteries: highmasteries,
-          winmasteries: winmasteries,
-          highskill: highskill,
-          winskill: winskill,
-          winrate: championobject.winRate,
-          playrate: championobject.playRate,
-          gamesplayed: championobject.gamesPlayed,
-          percentroleplayed: championobject.percentRolePlayed,
-          banrate: championobject.banRate
-        }
-        console.log('success');
-        saveitemphotos(finalitemshigh, finalitemswin, startingitemshigh, startingitemswin, function() {
-          cb(false, championggobject);
-        });
-      }
-
-    }
+    });
   });
 }
 
 function getchampionID(championname, cb) {
   request(urlchampid, function(error, response, body) {
-    if (error || response.statusCode == 403) {
-      cb('expired apikey! ** 403 response code **');
-      return;
-    } else if (response.statusCode == 503) {
-      cb('Riot api ** Static-Data-V3 ** servers are down! Check the riot api discord server. ** 503 response code **');
-    } else if (response.statusCode == 429) {
-      cb('rate limit exceeded');
-    } else if (!error && response.statusCode == 200) {
-      var importedJSON = JSON.parse(body);
-      championname = championname.toLowerCase();
-      championname = championname.charAt(0).toUpperCase() + championname.slice(1);
-      if (championname == "Wukong") {
-        data = 62;
-      } else if (championname == "Missfortune" || championname == "Miss fortune" || championname == "Ms. fortune") {
-        data = 21;
-      } else if (championname == "Drmundo" || championname == "Dr mundo") {
-        data = 36;
-      } else if (championname == "Twistedfate" || championname == "Twisted fate") {
-        data = 4;
-      } else if (championname == "Masteryi" || championname == "Master yi") {
-        data = 11;
-      } else if (championname == "Tahmkench" || championname == "Tahm kench") {
-        data = 223;
-      } else if (championname == "Xinzhao" || championname == "Xin zhao") {
-        data = 5;
-      } else if (championname == "Aurelionsol" || championname == "Aurelion sol") {
-        data = 136;
-      } else if (championname == "Leesin" || championname == "Lee sin") {
-        data = 64;
-      } else if (championname == "Reksai" || championname == "Rek'sai") {
-        data = 421;
-      } else if (championname == "Jarvaniv" || championname == "Jarvan iv") {
-        data = 59;
-      } else if (championname == "Kogmaw" || championname == "Kog'maw") {
-        data = 96;
+    requesterror(urlchampid, response.statusCode, function(err) {
+      if(err){
+        cb(err);
       } else {
-        try {
-          var data = importedJSON.data[championname].id;
-        } catch (err) {
-          cb('Type a real champion name!');
-          return;
+        var importedJSON = JSON.parse(body);
+        championname = championname.toLowerCase();
+        championname = championname.charAt(0).toUpperCase() + championname.slice(1);
+        if (championname == "Wukong") {
+          data = 62;
+        } else if (championname == "Missfortune" || championname == "Miss fortune" || championname == "Ms. fortune") {
+          data = 21;
+        } else if (championname == "Drmundo" || championname == "Dr mundo") {
+          data = 36;
+        } else if (championname == "Twistedfate" || championname == "Twisted fate") {
+          data = 4;
+        } else if (championname == "Masteryi" || championname == "Master yi") {
+          data = 11;
+        } else if (championname == "Tahmkench" || championname == "Tahm kench") {
+          data = 223;
+        } else if (championname == "Xinzhao" || championname == "Xin zhao") {
+          data = 5;
+        } else if (championname == "Aurelionsol" || championname == "Aurelion sol") {
+          data = 136;
+        } else if (championname == "Leesin" || championname == "Lee sin") {
+          data = 64;
+        } else if (championname == "Reksai" || championname == "Rek'sai") {
+          data = 421;
+        } else if (championname == "Jarvaniv" || championname == "Jarvan iv") {
+          data = 59;
+        } else if (championname == "Kogmaw" || championname == "Kog'maw") {
+          data = 96;
+        } else {
+          try {
+            var data = importedJSON.data[championname].id;
+          } catch (err) {
+            cb('Type a real champion name!');
+            return;
+          }
         }
+        cb(false, data);
       }
-      cb(false, data);
-    }
+    });
   });
 }
 
 function getsummonerid(summoner, cb) {
   request(urlsummonerid + urlencode(summoner) + "?api_key=" + lol_api, function(error, response, body) {
-    if (error || response.statusCode == 403) {
-      cb('expired apikey! ** 403 response code **');
-      return;
-    } else if (response.statusCode == 503) {
-      cb('Riot api ** Summoner-V3 ** servers are down! Check the riot api discord server. ** 503 response code **');
-    } else if (response.statusCode == 404) {
-      cb('summoner not found!');
-    } else if (!error && response.statusCode == 200) {
-      var importedJSON = JSON.parse(body);
-      var summonerid = importedJSON.id;
-      var accountlvl = importedJSON.summonerLevel;
-      var profileID = importedJSON.profileIconId;
-      var summonername = importedJSON.name;
-      var summonerobject = {
-        "summonerid": summonerid,
-        "accountlvl": accountlvl,
-        "profileid": profileID,
-        "name": summonername
+    requesterror(urlsummonerid, response.statusCode, function(err) {
+      if(err){
+        cb(err);
+      } else {
+        var importedJSON = JSON.parse(body);
+        var summonerid = importedJSON.id;
+        var accountlvl = importedJSON.summonerLevel;
+        var profileID = importedJSON.profileIconId;
+        var summonername = importedJSON.name;
+        var summonerobject = {
+          "summonerid": summonerid,
+          "accountlvl": accountlvl,
+          "profileid": profileID,
+          "name": summonername
+        }
+        cb(false, summonerobject);
       }
-      cb(false, summonerobject);
-    }
+    });
   });
 }
 
 function getlivematch(summonerobject, cb) {
   request(urllivematch + summonerobject.summonerid + "?api_key=" + lol_api, function(error, response, body) {
-    if (error || response.statusCode == 403) {
-      cb('expired apikey! ** 403 response code **');
-      return;
-    } else if (response.statusCode == 503) {
-      cb('Riot api ** Summoner-V3 ** servers are down! Check the riot api discord server. ** 503 response code **');
-    } else if (response.statusCode == 404) {
-      cb('summoner not in a match');
-    } else if (!error && response.statusCode == 200) {
-      console.log("found match, making matchobject");
-      var importedJSON = JSON.parse(body);
-      var gameid = importedJSON.gameId;
-      var gamemode = importedJSON.gameMode;
-      var mapid = importedJSON.mapId;
-      var gameType = importedJSON.gameType;
-      var gametime = importedJSON.gameStartTime;
-      var participants = importedJSON.participants;
-      var matchobject = {
-        "gameid": gameid,
-        "gamemode": gamemode,
-        "mapid": mapid,
-        "gametype": gameType,
-        "gametime": gametime,
-        "participants": participants,
-        "queue": importedJSON.gameQueueConfigId
+    if(response.statusCode == 404) {
+      cb('summoner not in a match!');
+    } else {
+
+    requesterror(urllivematch, response.statusCode, function(err) {
+      if(err) {
+        cb(err);
+      } else {
+        console.log("found match, making matchobject");
+        var importedJSON = JSON.parse(body);
+        var gameid = importedJSON.gameId;
+        var gamemode = importedJSON.gameMode;
+        var mapid = importedJSON.mapId;
+        var gameType = importedJSON.gameType;
+        var gametime = importedJSON.gameStartTime;
+        var participants = importedJSON.participants;
+        var matchobject = {
+          "gameid": gameid,
+          "gamemode": gamemode,
+          "mapid": mapid,
+          "gametype": gameType,
+          "gametime": gametime,
+          "participants": participants,
+          "queue": importedJSON.gameQueueConfigId
+        }
+        cb(false, matchobject);
       }
-      cb(false, matchobject);
-    }
+    });
+  }
   });
 }
 
@@ -435,42 +431,45 @@ function matchinfo(livematchobject, summonerobject, cb) {
 
 function livematchaddchampion(matchobject, cb) {
   request(urlgetchamp, function(error, response, body) {
-    if (response.statusCode == 503) {
-      cb('Riot ddragon servers down! Check the riot api discord server. ** 503 response code **');
-    } else if (!error && response.statusCode == 200) {
-      var importedJSON = JSON.parse(body);
-      var anothajson = importedJSON.data;
-      for (var i = 0; i < matchobject.blueplayers.length; i++) {
-        for (var key in anothajson) {
-          if (anothajson[key].key == (matchobject.blueplayers[i].championid + "")) {
-            matchobject.blueplayers[i].championname = anothajson[key].id;
-          } else if (matchobject.blueplayers[i].championid == 141) {
-            matchobject.blueplayers[i].championname = "Kayne";
-          } else {
-            continue;
-          }
-        }
-      }
-      for (var i = 0; i < matchobject.redplayers.length; i++) {
-        for (var key in anothajson) {
-          if (anothajson[key].key == (matchobject.redplayers[i].championid + "")) {
-            matchobject.redplayers[i].championname = anothajson[key].id;
-          } else if (matchobject.redplayers[i].championid == 141) {
-            matchobject.redplayers[i].championname = "Kayne";
-          } else {
-            continue;
-          }
-        }
-      }
-    }
-
-    livematchaddmastery(matchobject, function(err, newmatchobject) {
-      if (err) {
+    requesterror(urlgetchamp, response.statusCode, function(err) {
+      if(err) {
         cb(err);
       } else {
-        cb(false, newmatchobject);
+        var importedJSON = JSON.parse(body);
+        var anothajson = importedJSON.data;
+        for (var i = 0; i < matchobject.blueplayers.length; i++) {
+          for (var key in anothajson) {
+            if (anothajson[key].key == (matchobject.blueplayers[i].championid + "")) {
+              matchobject.blueplayers[i].championname = anothajson[key].id;
+            } else if (matchobject.blueplayers[i].championid == 141) {
+              matchobject.blueplayers[i].championname = "Kayne";
+            } else {
+              continue;
+            }
+          }
+        }
+        for (var i = 0; i < matchobject.redplayers.length; i++) {
+          for (var key in anothajson) {
+            if (anothajson[key].key == (matchobject.redplayers[i].championid + "")) {
+              matchobject.redplayers[i].championname = anothajson[key].id;
+            } else if (matchobject.redplayers[i].championid == 141) {
+              matchobject.redplayers[i].championname = "Kayne";
+            } else {
+              continue;
+            }
+          }
+        }
       }
-    })
+
+      livematchaddmastery(matchobject, function(err, newmatchobject) {
+        if (err) {
+          cb(err);
+        } else {
+          cb(false, newmatchobject);
+        }
+      })
+    });
+
   });
 
 
@@ -487,34 +486,35 @@ function livematchaddmastery(matchobject, cb) {
   var loops = 0;
   async.forEachOf(matchobject[teamarray], function(value, l, callback) {
     request(urlgetmastery + matchobject[teamarray][l].summonerid + "?api_key=" + lol_api, function(error, response, body) {
-      if (response.statusCode == 503) {
-        cb('Riot ddragon servers down! Check the riot api discord server. ** 503 response code **');
-      } else if (response.statusCode == 404) {
-        cb('404 in urlgetmastery link');
-      } else if (!error && response.statusCode == 200) {
-        var importedJSON = JSON.parse(body);
+      requesterror(urlgetmastery + matchobject[teamarray][l].summonerid + "?api_key=" + lol_api, response.statusCode, function(err) {
+        if(err) {
+          cb(err);
+        } else {
+          var importedJSON = JSON.parse(body);
 
-        if (importedJSON[0].championId == matchobject[teamarray][l].championid) {
-          matchobject[teamarray][l].mostplayed = true;
-        }
-        for (var j = 0; j < 10; j++) {
-          if (importedJSON[j].championId == matchobject[teamarray][l].championid) {
-            matchobject[teamarray][l].masterypoints = importedJSON[j].championPoints;
-            break;
+          if (importedJSON[0].championId == matchobject[teamarray][l].championid) {
+            matchobject[teamarray][l].mostplayed = true;
           }
-        }
-        loops++;
-        if (loops == matchobject[teamarray].length) {
-          livematchaddrank(matchobject, function(err, newmatchobject) {
-            if (err) {
-              cb(err);
-            } else {
-              cb(false, newmatchobject);
+          for (var j = 0; j < 10; j++) {
+            if (importedJSON[j].championId == matchobject[teamarray][l].championid) {
+              matchobject[teamarray][l].masterypoints = importedJSON[j].championPoints;
+              break;
             }
-          });
+          }
+          loops++;
+          if (loops == matchobject[teamarray].length) {
+            livematchaddrank(matchobject, function(err, newmatchobject) {
+              if (err) {
+                cb(err);
+              } else {
+                cb(false, newmatchobject);
+              }
+            });
+          }
+          callback();
         }
-        callback();
-      }
+      });
+
     });
 
   });
@@ -536,102 +536,102 @@ function livematchaddrank(matchobject, cb) {
   async.forEachOf(matchobject[teamarray], function(value, l, callback) {
 
     request(urlgetrank + matchobject[teamarray][l].summonerid + "?api_key=" + lol_api, function(error, response, body) {
-      if (response.statusCode == 503) {
-        cb('Riot ddragon servers down! Check the riot api discord server. ** 503 response code **');
-      } else if (response.statusCode == 404) {
-        cb('404 in urlgetrank link');
-      } else if (!error && response.statusCode == 200) {
-        var importedJSON = JSON.parse(body);
-        for (var i = 0; i < importedJSON.length; i++) {
-          if (matchobject.gametype == 'Ranked Solo' && importedJSON[i].queueType == 'RANKED_SOLO_5x5') {
-            matchobject[teamarray][l].tier = importedJSON[i].tier;
-            matchobject[teamarray][l].rank = importedJSON[i].rank;
-            matchobject[teamarray][l].wins = importedJSON[i].wins;
-            matchobject[teamarray][l].losses = importedJSON[i].losses;
-            matchobject[teamarray][l].hotStreak = importedJSON[i].hotStreak;
-            break;
+      requesterror(urlgetrank + matchobject[teamarray][l].summonerid + "?api_key=" + lol_api, response.statusCode, function(err) {
+        if(err) {
+          cb(err);
+        }else {
+          var importedJSON = JSON.parse(body);
+          for (var i = 0; i < importedJSON.length; i++) {
+            if (matchobject.gametype == 'Ranked Solo' && importedJSON[i].queueType == 'RANKED_SOLO_5x5') {
+              matchobject[teamarray][l].tier = importedJSON[i].tier;
+              matchobject[teamarray][l].rank = importedJSON[i].rank;
+              matchobject[teamarray][l].wins = importedJSON[i].wins;
+              matchobject[teamarray][l].losses = importedJSON[i].losses;
+              matchobject[teamarray][l].hotStreak = importedJSON[i].hotStreak;
+              break;
+            }
+            if (matchobject.gametype == 'Ranked Flex' && importedJSON[i].queueType == 'RANKED_FLEX_SR') {
+              matchobject[teamarray][l].tier = importedJSON[i].tier;
+              matchobject[teamarray][l].rank = importedJSON[i].rank;
+              matchobject[teamarray][l].wins = importedJSON[i].wins;
+              matchobject[teamarray][l].losses = importedJSON[i].losses;
+              matchobject[teamarray][l].hotStreak = importedJSON[i].hotStreak;
+              break;
+            } else if (importedJSON[i].queueType == 'RANKED_SOLO_5x5') {
+              matchobject[teamarray][l].tier = importedJSON[i].tier;
+              matchobject[teamarray][l].rank = importedJSON[i].rank;
+              matchobject[teamarray][l].wins = importedJSON[i].wins;
+              matchobject[teamarray][l].losses = importedJSON[i].losses;
+              matchobject[teamarray][l].hotStreak = importedJSON[i].hotStreak;
+            }
           }
-          if (matchobject.gametype == 'Ranked Flex' && importedJSON[i].queueType == 'RANKED_FLEX_SR') {
-            matchobject[teamarray][l].tier = importedJSON[i].tier;
-            matchobject[teamarray][l].rank = importedJSON[i].rank;
-            matchobject[teamarray][l].wins = importedJSON[i].wins;
-            matchobject[teamarray][l].losses = importedJSON[i].losses;
-            matchobject[teamarray][l].hotStreak = importedJSON[i].hotStreak;
-            break;
-          } else if (importedJSON[i].queueType == 'RANKED_SOLO_5x5') {
-            matchobject[teamarray][l].tier = importedJSON[i].tier;
-            matchobject[teamarray][l].rank = importedJSON[i].rank;
-            matchobject[teamarray][l].wins = importedJSON[i].wins;
-            matchobject[teamarray][l].losses = importedJSON[i].losses;
-            matchobject[teamarray][l].hotStreak = importedJSON[i].hotStreak;
+          if (importedJSON.length == 0) {
+            matchobject[teamarray][l].tier = "UNRANKED";
+            matchobject[teamarray][l].rank = "";
+            matchobject[teamarray][l].wins = 0;
+            matchobject[teamarray][l].losses = 1;
+            matchobject[teamarray][l].hotStreak = false;
           }
-        }
-        if (importedJSON.length == 0) {
-          matchobject[teamarray][l].tier = "UNRANKED";
-          matchobject[teamarray][l].rank = "";
-          matchobject[teamarray][l].wins = 0;
-          matchobject[teamarray][l].losses = 1;
-          matchobject[teamarray][l].hotStreak = false;
-        }
-        loops++;
-        var loops1 = 0;
-        if (loops == matchobject[teamarray].length) {
-          teamarray = otherarray;
-          async.forEachOf(matchobject[teamarray], function(value, j, callback) {
-
-            request(urlgetrank + matchobject[teamarray][j].summonerid + "?api_key=" + lol_api, function(error, response, body) {
-              if (response.statusCode == 503) {
-                cb('Riot ddragon servers down! Check the riot api discord server. ** 503 response code **');
-              } else if (response.statusCode == 404) {
-                cb('404 in urlgetrank link');
-              } else if (!error && response.statusCode == 200) {
-                var importedJSON = JSON.parse(body);
-                for (var i = 0; i < importedJSON.length; i++) {
-                  if (matchobject.gametype == 'Ranked Solo' && importedJSON[i].queueType == 'RANKED_SOLO_5x5') {
-                    matchobject[teamarray][j].tier = importedJSON[i].tier;
-                    matchobject[teamarray][j].rank = importedJSON[i].rank;
-                    matchobject[teamarray][j].wins = importedJSON[i].wins;
-                    matchobject[teamarray][j].losses = importedJSON[i].losses;
-                    matchobject[teamarray][j].hotStreak = importedJSON[i].hotStreak;
-                    break;
+          loops++;
+          var loops1 = 0;
+          if (loops == matchobject[teamarray].length) {
+            teamarray = otherarray;
+            async.forEachOf(matchobject[teamarray], function(value, j, callback) {
+              request(urlgetrank + matchobject[teamarray][j].summonerid + "?api_key=" + lol_api, function(error, response, body) {
+                requesterror(urlgetrank + matchobject[teamarray][j].summonerid + "?api_key=" + lol_api, response.statusCode, function(err) {
+                  if(err) {
+                    cb(err);
+                  } else {
+                    var importedJSON = JSON.parse(body);
+                    for (var i = 0; i < importedJSON.length; i++) {
+                      if (matchobject.gametype == 'Ranked Solo' && importedJSON[i].queueType == 'RANKED_SOLO_5x5') {
+                        matchobject[teamarray][j].tier = importedJSON[i].tier;
+                        matchobject[teamarray][j].rank = importedJSON[i].rank;
+                        matchobject[teamarray][j].wins = importedJSON[i].wins;
+                        matchobject[teamarray][j].losses = importedJSON[i].losses;
+                        matchobject[teamarray][j].hotStreak = importedJSON[i].hotStreak;
+                        break;
+                      }
+                      if (matchobject.gametype == 'Ranked Flex' && importedJSON[i].queueType == 'RANKED_FLEX_SR') {
+                        matchobject[teamarray][j].tier = importedJSON[i].tier;
+                        matchobject[teamarray][j].rank = importedJSON[i].rank;
+                        matchobject[teamarray][j].wins = importedJSON[i].wins;
+                        matchobject[teamarray][j].losses = importedJSON[i].losses;
+                        matchobject[teamarray][j].hotStreak = importedJSON[i].hotStreak;
+                        break;
+                      } else if (importedJSON[i].queueType == 'RANKED_SOLO_5x5') {
+                        matchobject[teamarray][j].tier = importedJSON[i].tier;
+                        matchobject[teamarray][j].rank = importedJSON[i].rank;
+                        matchobject[teamarray][j].wins = importedJSON[i].wins;
+                        matchobject[teamarray][j].losses = importedJSON[i].losses;
+                        matchobject[teamarray][j].hotStreak = importedJSON[i].hotStreak;
+                      }
+                    }
+                    if (importedJSON.length == 0) {
+                      matchobject[teamarray][j].tier = "UNRANKED";
+                      matchobject[teamarray][j].rank = "";
+                      matchobject[teamarray][j].wins = 0;
+                      matchobject[teamarray][j].losses = 1;
+                      matchobject[teamarray][j].hotStreak = false;
+                    }
+                    loops1++;
+                    if (loops1 == matchobject[teamarray].length) {
+                      cb(false, matchobject);
+                    }
+                    callback();
                   }
-                  if (matchobject.gametype == 'Ranked Flex' && importedJSON[i].queueType == 'RANKED_FLEX_SR') {
-                    matchobject[teamarray][j].tier = importedJSON[i].tier;
-                    matchobject[teamarray][j].rank = importedJSON[i].rank;
-                    matchobject[teamarray][j].wins = importedJSON[i].wins;
-                    matchobject[teamarray][j].losses = importedJSON[i].losses;
-                    matchobject[teamarray][j].hotStreak = importedJSON[i].hotStreak;
-                    break;
-                  } else if (importedJSON[i].queueType == 'RANKED_SOLO_5x5') {
-                    matchobject[teamarray][j].tier = importedJSON[i].tier;
-                    matchobject[teamarray][j].rank = importedJSON[i].rank;
-                    matchobject[teamarray][j].wins = importedJSON[i].wins;
-                    matchobject[teamarray][j].losses = importedJSON[i].losses;
-                    matchobject[teamarray][j].hotStreak = importedJSON[i].hotStreak;
-                  }
-                }
-                if (importedJSON.length == 0) {
-                  matchobject[teamarray][j].tier = "UNRANKED";
-                  matchobject[teamarray][j].rank = "";
-                  matchobject[teamarray][j].wins = 0;
-                  matchobject[teamarray][j].losses = 1;
-                  matchobject[teamarray][j].hotStreak = false;
-                }
-                loops1++;
-                if (loops1 == matchobject[teamarray].length) {
-                  cb(false, matchobject);
-                }
-                callback();
+                });
 
-              }
+              });
+
             });
 
-          });
 
-
+          }
+          callback();
         }
-        callback();
-      }
+      });
+
     });
 
   });
@@ -854,27 +854,49 @@ function getrunestring(yourarray, matchobject, summonerobject, cb) {
     }
   }
   request(urlrunes, function(error, response, body) {
-    if (response.statusCode == 503) {
-      cb('Riot ddragon servers down! Check the riot api discord server. ** 503 response code **');
-    } else if (!error && response.statusCode == 200) {
-      var importedJSON = JSON.parse(body);
-      var runename = "";
-      var runeid = "";
-      var runenum = "";
-      var key = "";
-      console.log(runeobject);
-      for (var i = 0; i < runeobject.length; i++) {
-        runeid = runeobject[i].runeId;
-        runenum = runeobject[i].count;
-        key = runeid + "";
-        runename = importedJSON.data[key].name;
-        rune += "**" + runenum + "x " + runename + "**\n";
+    requesterror(urlrunes, response.statusCode, function(err) {
+      if(err) {
+        cb(err);
+      } else {
+        var importedJSON = JSON.parse(body);
+        var runename = "";
+        var runeid = "";
+        var runenum = "";
+        var key = "";
+        console.log(runeobject);
+        for (var i = 0; i < runeobject.length; i++) {
+          runeid = runeobject[i].runeId;
+          runenum = runeobject[i].count;
+          key = runeid + "";
+          runename = importedJSON.data[key].name;
+          rune += "**" + runenum + "x " + runename + "**\n";
+        }
+        cb(false, rune);
       }
-      cb(rune);
-    }
+    });
+
   });
 }
 
+function requesterror(url, response, cb) {
+  if (response == 200) {
+    cb(false);
+  } else if(response == 400) {
+    cb('400 bad request **' + url + '**');
+  } else if(response == 403) {
+    cb('403 Forbidden. Invalid api key **' + url + '**');
+  } else if(response == 404) {
+    cb('404 Not found **' + url + '**');
+  } else if(response == 415) {
+    cb('415 unsupported Media Type **' + url + '**');
+  } else if(response == 429) {
+    cb('429 Rate limit exceeded **' + url + '**');
+  } else if(response == 500) {
+    cb('500 internal server error **' + url + '**');
+  } else if(response == 503) {
+    cb('503 service unavailable **' + url + '**');
+  }
+}
 function printskillorder(championggobject, cb) {
 
   var highskillwr = roundTo(championggobject.highskill.winrate * 100, 2);
@@ -883,78 +905,78 @@ function printskillorder(championggobject, cb) {
   var winskill = "Highest Win-Rate Skill Order: \n**" + championggobject.winskill.hash+ "** (" + championggobject.winskill.count + " games, winrate: " + winskillwr + "%)";
   var string = highskill + "\n" + winskill + "\n";
   request(urlmasteries, function(error, response, body) {
-    if (response.statusCode == 503) {
-      cb('Riot ddragon servers down! Check the riot api discord server. ** 503 response code **');
-    } else if (!error && response.statusCode == 200) {
-      var ferocitynum = 0;
-      var cunningnum = 0;
-      var resolvenum = 0;
-      var importedJSON = JSON.parse(body);
-      var mastery = championggobject.highmasteries.hash.split('-');
-      var ferocityarray = importedJSON.tree.Ferocity;
-      var cunningarray = importedJSON.tree.Cunning;
-      var resolvearray = importedJSON.tree.Resolve;
-      var keystone = "";
-      var found = false;
-      var message = "";
-      for (var i = 0; i < mastery.length; i+= 2) {
-        found = false;
-        for (var a = 0; a < ferocityarray.length; a ++) {
-          if(!found) {
-            for(var b = 0; b < ferocityarray[a].length; b++) {
-              if(mastery[i] == ferocityarray[a][b].masteryId) {
-                ferocitynum += parseInt(mastery[i+1]);
-                found = true;
-                break;
+    requesterror(urlmasteries, response.statusCode, function(err) {
+      if(err) {
+        cb(err);
+      } else {
+        var ferocitynum = 0;
+        var cunningnum = 0;
+        var resolvenum = 0;
+        var importedJSON = JSON.parse(body);
+        var mastery = championggobject.highmasteries.hash.split('-');
+        var ferocityarray = importedJSON.tree.Ferocity;
+        var cunningarray = importedJSON.tree.Cunning;
+        var resolvearray = importedJSON.tree.Resolve;
+        var keystone = "";
+        var found = false;
+        var message = "";
+        for (var i = 0; i < mastery.length; i+= 2) {
+          found = false;
+          for (var a = 0; a < ferocityarray.length; a ++) {
+            if(!found) {
+              for(var b = 0; b < ferocityarray[a].length; b++) {
+                if(mastery[i] == ferocityarray[a][b].masteryId) {
+                  ferocitynum += parseInt(mastery[i+1]);
+                  found = true;
+                  break;
+                }
               }
             }
-          }
-          else {
-            break;
-          }
-        }
-        for (var c = 0; c < cunningarray.length; c ++) {
-          if(!found) {
-            for(var d = 0; d < cunningarray[c].length; d++) {
-              if(mastery[i] == cunningarray[c][d].masteryId) {
-                cunningnum += parseInt(mastery[i+1]);
-                found = true;
-                break;
-              }
+            else {
+              break;
             }
           }
-          else {
-            break;
-          }
-        }
-        for (var e = 0; e < resolvearray.length; e ++) {
-          if(!found) {
-            for(var f = 0; f < resolvearray[e].length; f++) {
-              if(mastery[i] == resolvearray[e][f].masteryId) {
-                resolvenum += parseInt(mastery[i+1]);
-                found = true;
-                break;
+          for (var c = 0; c < cunningarray.length; c ++) {
+            if(!found) {
+              for(var d = 0; d < cunningarray[c].length; d++) {
+                if(mastery[i] == cunningarray[c][d].masteryId) {
+                  cunningnum += parseInt(mastery[i+1]);
+                  found = true;
+                  break;
+                }
               }
             }
+            else {
+              break;
+            }
           }
-          else {
-            break;
+          for (var e = 0; e < resolvearray.length; e ++) {
+            if(!found) {
+              for(var f = 0; f < resolvearray[e].length; f++) {
+                if(mastery[i] == resolvearray[e][f].masteryId) {
+                  resolvenum += parseInt(mastery[i+1]);
+                  found = true;
+                  break;
+                }
+              }
+            }
+            else {
+              break;
+            }
           }
-        }
-        if(i == mastery.length - 2 || i == 12) {
-          console.log(mastery[i]);
-          console.log(i);
           if(keystonemastery[mastery[i]] != undefined) {
-            keystone = keystonemastery[mastery[i]];
-          }
-
+              keystone = keystonemastery[mastery[i]];
+            }
         }
+        message = "Masteries: \n**" + ferocitynum + "-" + cunningnum + "-" + resolvenum + " **KEYSTONE: **" + keystone + "**";
+        console.log(keystone);
+
+        string += message;
+        cb(false, string);
       }
-      message = "Masteries: \n**" + ferocitynum + "-" + cunningnum + "-" + resolvenum + " **KEYSTONE: **" + keystone + "**";
-      string += message;
-      cb(string);
-    }
+    });
   });
+
 }
 
 function printbuild(message, args, championggobject) {
@@ -973,9 +995,13 @@ function printbuild(message, args, championggobject) {
     file: 'C:/jeff/Kennen-bot/winratestart.jpg'
   });
   console.log(championggobject);
-  printskillorder(championggobject, function(string) {
+  printskillorder(championggobject, function(err, string) {
     console.log(string);
-    message.channel.send(string);
+    if(err) {
+      message.channel.send(err);
+    }else {
+      message.channel.send(string);
+    }
   });
 
 }
@@ -1028,54 +1054,60 @@ function matchmessage(message, matchobject, summonerobject) {
 
   }
 
-  getrunestring(yourarray, matchobject, summonerobject, function(runes) {
-    message.channel.send({
-      "embed": {
-        "title": "Live Match Info for **" + summonerobject.name + "**",
-        "description": matchobject.gametype + " on " + matchobject.map + " **" + matchobject.time + " **in game",
-        "color": 12717994,
-        "author": {
-          "name": summonerobject.name,
-          "icon_url": "http://ddragon.leagueoflegends.com/cdn/6.24.1/img/profileicon/" + summonerobject.profileid + ".png"
-        },
-        "fields": [
+  getrunestring(yourarray, matchobject, summonerobject, function(err, runes) {
+    if(err) {
+      message.channel.send(err);
+    }
+    else {
+      message.channel.send({
+        "embed": {
+          "title": "Live Match Info for **" + summonerobject.name + "**",
+          "description": matchobject.gametype + " on " + matchobject.map + " **" + matchobject.time + " **in game",
+          "color": 12717994,
+          "author": {
+            "name": summonerobject.name,
+            "icon_url": "http://ddragon.leagueoflegends.com/cdn/6.24.1/img/profileicon/" + summonerobject.profileid + ".png"
+          },
+          "fields": [
 
-          {
-            "name": "Enemy Team",
-            "value": enemyteam,
-            "inline": true
-          },
-          {
-            "name": "-",
-            "value": enemyteam2,
-            "inline": true
-          },
-          {
-            "name": "Your Team",
-            "value": yourteam,
-            "inline": true
-          },
-          {
-            "name": "-",
-            "value": yourteam2,
-            "inline": true
-          },
-          {
-            "name": "Enemy Players to Watch",
-            "value": watchout + "\n "
-          },
-          {
-            "name": "High Ranked Enemy Players",
-            "value": highranks
-          },
-          {
-            "name": "Your Runes",
-            "value": runes
-          }
+            {
+              "name": "Enemy Team",
+              "value": enemyteam,
+              "inline": true
+            },
+            {
+              "name": "-",
+              "value": enemyteam2,
+              "inline": true
+            },
+            {
+              "name": "Your Team",
+              "value": yourteam,
+              "inline": true
+            },
+            {
+              "name": "-",
+              "value": yourteam2,
+              "inline": true
+            },
+            {
+              "name": "Enemy Players to Watch",
+              "value": watchout + "\n "
+            },
+            {
+              "name": "High Ranked Enemy Players",
+              "value": highranks
+            },
+            {
+              "name": "Your Runes",
+              "value": runes
+            }
 
-        ]
-      }
-    });
+          ]
+        }
+      });
+    }
+
   });
 
 
