@@ -32,6 +32,7 @@ const urlgetmastery = "https://na1.api.riotgames.com/lol/champion-mastery/v3/cha
 const urlgetrank = "https://na1.api.riotgames.com/lol/league/v3/positions/by-summoner/";
 const urlrunes = "http://ddragon.leagueoflegends.com/cdn/6.24.1/data/en_US/rune.json";
 const urlmasteries = "http://ddragon.leagueoflegends.com/cdn/6.24.1/data/en_US/mastery.json";
+const urlsummonermastery = "https://na1.api.riotgames.com/lol/champion-mastery/v3/champion-masteries/by-summoner/";
 
 var queuearray = {
   '0': 'Custom',
@@ -51,6 +52,7 @@ var queuearray = {
   '65': 'ARAM',
   '70': 'One for All',
   '76': 'URF',
+  '318': 'All Random URF',
   '325': 'All Random Games',
   '400': 'Normal 5v5 Draft Pick',
   '410': 'Ranked 5v5 Draft Pick',
@@ -549,23 +551,15 @@ function livematchaddrank(matchobject, cb) {
               matchobject[teamarray][l].losses = importedJSON[i].losses;
               matchobject[teamarray][l].hotStreak = importedJSON[i].hotStreak;
               break;
-            }
-            if (matchobject.gametype == 'Ranked Flex' && importedJSON[i].queueType == 'RANKED_FLEX_SR') {
-              matchobject[teamarray][l].tier = importedJSON[i].tier;
-              matchobject[teamarray][l].rank = importedJSON[i].rank;
-              matchobject[teamarray][l].wins = importedJSON[i].wins;
-              matchobject[teamarray][l].losses = importedJSON[i].losses;
-              matchobject[teamarray][l].hotStreak = importedJSON[i].hotStreak;
-              break;
-            } else if (importedJSON[i].queueType == 'RANKED_SOLO_5x5') {
-              matchobject[teamarray][l].tier = importedJSON[i].tier;
-              matchobject[teamarray][l].rank = importedJSON[i].rank;
-              matchobject[teamarray][l].wins = importedJSON[i].wins;
-              matchobject[teamarray][l].losses = importedJSON[i].losses;
-              matchobject[teamarray][l].hotStreak = importedJSON[i].hotStreak;
-            }
-          }
-          if (importedJSON.length == 0) {
+
+          } else if (importedJSON[i].queueType == 'RANKED_SOLO_5x5') {
+            matchobject[teamarray][l].tier = importedJSON[i].tier;
+            matchobject[teamarray][l].rank = importedJSON[i].rank;
+            matchobject[teamarray][l].wins = importedJSON[i].wins;
+            matchobject[teamarray][l].losses = importedJSON[i].losses;
+            matchobject[teamarray][l].hotStreak = importedJSON[i].hotStreak;
+          }}
+          if (matchobject[teamarray][l].tier == undefined) {
             matchobject[teamarray][l].tier = "UNRANKED";
             matchobject[teamarray][l].rank = "";
             matchobject[teamarray][l].wins = 0;
@@ -591,14 +585,6 @@ function livematchaddrank(matchobject, cb) {
                         matchobject[teamarray][j].losses = importedJSON[i].losses;
                         matchobject[teamarray][j].hotStreak = importedJSON[i].hotStreak;
                         break;
-                      }
-                      if (matchobject.gametype == 'Ranked Flex' && importedJSON[i].queueType == 'RANKED_FLEX_SR') {
-                        matchobject[teamarray][j].tier = importedJSON[i].tier;
-                        matchobject[teamarray][j].rank = importedJSON[i].rank;
-                        matchobject[teamarray][j].wins = importedJSON[i].wins;
-                        matchobject[teamarray][j].losses = importedJSON[i].losses;
-                        matchobject[teamarray][j].hotStreak = importedJSON[i].hotStreak;
-                        break;
                       } else if (importedJSON[i].queueType == 'RANKED_SOLO_5x5') {
                         matchobject[teamarray][j].tier = importedJSON[i].tier;
                         matchobject[teamarray][j].rank = importedJSON[i].rank;
@@ -607,7 +593,7 @@ function livematchaddrank(matchobject, cb) {
                         matchobject[teamarray][j].hotStreak = importedJSON[i].hotStreak;
                       }
                     }
-                    if (importedJSON.length == 0) {
+                    if (matchobject[teamarray][j].tier == undefined) {
                       matchobject[teamarray][j].tier = "UNRANKED";
                       matchobject[teamarray][j].rank = "";
                       matchobject[teamarray][j].wins = 0;
