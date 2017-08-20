@@ -103,6 +103,7 @@ client.on('message', function(message) {
       if (err) {
         message.reply(err);
       } else {
+        console.log(champid);
         getbuild(champid, argstwo, function(err, championggobject) {
           if (err) {
             message.reply(err);
@@ -190,7 +191,7 @@ function getbuild(champid, argstwo, cb) {
   console.log(champrole);
   request(urlinfo, function(error, response, body) {
     requesterror(urlinfo, response.statusCode, function(err) {
-      if(err) {
+      if (err) {
         cb(err);
       } else {
         var importedJSON = JSON.parse(body);
@@ -257,7 +258,7 @@ function getbuild(champid, argstwo, cb) {
 function getchampionID(championname, cb) {
   request(urlchampid, function(error, response, body) {
     requesterror(urlchampid, response.statusCode, function(err) {
-      if(err){
+      if (err) {
         cb(err);
       } else {
         var importedJSON = JSON.parse(body);
@@ -304,7 +305,7 @@ function getchampionID(championname, cb) {
 function getsummonerid(summoner, cb) {
   request(urlsummonerid + urlencode(summoner) + "?api_key=" + lol_api, function(error, response, body) {
     requesterror(urlsummonerid, response.statusCode, function(err) {
-      if(err){
+      if (err) {
         cb(err);
       } else {
         var importedJSON = JSON.parse(body);
@@ -326,35 +327,35 @@ function getsummonerid(summoner, cb) {
 
 function getlivematch(summonerobject, cb) {
   request(urllivematch + summonerobject.summonerid + "?api_key=" + lol_api, function(error, response, body) {
-    if(response.statusCode == 404) {
+    if (response.statusCode == 404) {
       cb('summoner not in a match!');
     } else {
 
-    requesterror(urllivematch, response.statusCode, function(err) {
-      if(err) {
-        cb(err);
-      } else {
-        console.log("found match, making matchobject");
-        var importedJSON = JSON.parse(body);
-        var gameid = importedJSON.gameId;
-        var gamemode = importedJSON.gameMode;
-        var mapid = importedJSON.mapId;
-        var gameType = importedJSON.gameType;
-        var gametime = importedJSON.gameStartTime;
-        var participants = importedJSON.participants;
-        var matchobject = {
-          "gameid": gameid,
-          "gamemode": gamemode,
-          "mapid": mapid,
-          "gametype": gameType,
-          "gametime": gametime,
-          "participants": participants,
-          "queue": importedJSON.gameQueueConfigId
+      requesterror(urllivematch, response.statusCode, function(err) {
+        if (err) {
+          cb(err);
+        } else {
+          console.log("found match, making matchobject");
+          var importedJSON = JSON.parse(body);
+          var gameid = importedJSON.gameId;
+          var gamemode = importedJSON.gameMode;
+          var mapid = importedJSON.mapId;
+          var gameType = importedJSON.gameType;
+          var gametime = importedJSON.gameStartTime;
+          var participants = importedJSON.participants;
+          var matchobject = {
+            "gameid": gameid,
+            "gamemode": gamemode,
+            "mapid": mapid,
+            "gametype": gameType,
+            "gametime": gametime,
+            "participants": participants,
+            "queue": importedJSON.gameQueueConfigId
+          }
+          cb(false, matchobject);
         }
-        cb(false, matchobject);
-      }
-    });
-  }
+      });
+    }
   });
 }
 
@@ -373,7 +374,7 @@ function matchinfo(livematchobject, summonerobject, cb) {
   second = roundTo(second, 0);
   minute = roundTo(minute, 0);
   hour = roundTo(hour, 0);
-  if(hour > 100) {
+  if (hour > 100) {
     time = "Loading into";
   } else {
     time = hour + " hours, " + minute + " minutes and " + second + " seconds";
@@ -394,6 +395,14 @@ function matchinfo(livematchobject, summonerobject, cb) {
       playerobject.team = "BLUE";
       playerobject.mostplayed = false;
       playerobject.masterypoints = 0;
+      for (var j = 0; j < players[i].masteries.length; j++) {
+        if(players[i].masteries[j].masteryId == 6241){
+          playerobject.insight = true;
+          break;
+        } else {
+          playerobject.insight = false;
+        }
+      }
       blueplayers.push(playerobject);
       if (summonerobject.summonerid == players[i].summonerId) {
         team = 'BLUE';
@@ -407,6 +416,14 @@ function matchinfo(livematchobject, summonerobject, cb) {
       playerobject.team = "RED";
       playerobject.mostplayed = false;
       playerobject.masterypoints = 0;
+      for (var j = 0; j < players[i].masteries.length; j++) {
+        if(players[i].masteries[j].masteryId == 6241){
+          playerobject.insight = true;
+          break;
+        } else {
+          playerobject.insight = false;
+        }
+      }
       redplayers.push(playerobject);
       if (summonerobject.summonerid == players[i].summonerId) {
         team = 'RED';
@@ -434,7 +451,7 @@ function matchinfo(livematchobject, summonerobject, cb) {
 function livematchaddchampion(matchobject, cb) {
   request(urlgetchamp, function(error, response, body) {
     requesterror(urlgetchamp, response.statusCode, function(err) {
-      if(err) {
+      if (err) {
         cb(err);
       } else {
         var importedJSON = JSON.parse(body);
@@ -444,7 +461,11 @@ function livematchaddchampion(matchobject, cb) {
             if (anothajson[key].key == (matchobject.blueplayers[i].championid + "")) {
               matchobject.blueplayers[i].championname = anothajson[key].id;
             } else if (matchobject.blueplayers[i].championid == 141) {
-              matchobject.blueplayers[i].championname = "Kayne";
+              matchobject.blueplayers[i].championname = "Kayn";
+            } else if (matchobject.blueplayers[i].championid == 498) {
+              matchobject.blueplayers[i].championname = "Xayah";
+            } else if (matchobject.blueplayers[i].championid == 497) {
+              matchobject.blueplayers[i].championname = "Rakan";
             } else {
               continue;
             }
@@ -455,7 +476,11 @@ function livematchaddchampion(matchobject, cb) {
             if (anothajson[key].key == (matchobject.redplayers[i].championid + "")) {
               matchobject.redplayers[i].championname = anothajson[key].id;
             } else if (matchobject.redplayers[i].championid == 141) {
-              matchobject.redplayers[i].championname = "Kayne";
+              matchobject.redplayers[i].championname = "Kayn";
+            } else if (matchobject.redplayers[i].championid == 498) {
+              matchobject.redplayers[i].championname = "Xayah";
+            } else if (matchobject.redplayers[i].championid == 497) {
+              matchobject.redplayers[i].championname = "Rakan";
             } else {
               continue;
             }
@@ -489,7 +514,7 @@ function livematchaddmastery(matchobject, cb) {
   async.forEachOf(matchobject[teamarray], function(value, l, callback) {
     request(urlgetmastery + matchobject[teamarray][l].summonerid + "?api_key=" + lol_api, function(error, response, body) {
       requesterror(urlgetmastery + matchobject[teamarray][l].summonerid + "?api_key=" + lol_api, response.statusCode, function(err) {
-        if(err) {
+        if (err) {
           cb(err);
         } else {
           var importedJSON = JSON.parse(body);
@@ -539,9 +564,9 @@ function livematchaddrank(matchobject, cb) {
 
     request(urlgetrank + matchobject[teamarray][l].summonerid + "?api_key=" + lol_api, function(error, response, body) {
       requesterror(urlgetrank + matchobject[teamarray][l].summonerid + "?api_key=" + lol_api, response.statusCode, function(err) {
-        if(err) {
+        if (err) {
           cb(err);
-        }else {
+        } else {
           var importedJSON = JSON.parse(body);
           for (var i = 0; i < importedJSON.length; i++) {
             if (matchobject.gametype == 'Ranked Solo' && importedJSON[i].queueType == 'RANKED_SOLO_5x5') {
@@ -552,13 +577,14 @@ function livematchaddrank(matchobject, cb) {
               matchobject[teamarray][l].hotStreak = importedJSON[i].hotStreak;
               break;
 
-          } else if (importedJSON[i].queueType == 'RANKED_SOLO_5x5') {
-            matchobject[teamarray][l].tier = importedJSON[i].tier;
-            matchobject[teamarray][l].rank = importedJSON[i].rank;
-            matchobject[teamarray][l].wins = importedJSON[i].wins;
-            matchobject[teamarray][l].losses = importedJSON[i].losses;
-            matchobject[teamarray][l].hotStreak = importedJSON[i].hotStreak;
-          }}
+            } else if (importedJSON[i].queueType == 'RANKED_SOLO_5x5') {
+              matchobject[teamarray][l].tier = importedJSON[i].tier;
+              matchobject[teamarray][l].rank = importedJSON[i].rank;
+              matchobject[teamarray][l].wins = importedJSON[i].wins;
+              matchobject[teamarray][l].losses = importedJSON[i].losses;
+              matchobject[teamarray][l].hotStreak = importedJSON[i].hotStreak;
+            }
+          }
           if (matchobject[teamarray][l].tier == undefined) {
             matchobject[teamarray][l].tier = "UNRANKED";
             matchobject[teamarray][l].rank = "";
@@ -573,7 +599,7 @@ function livematchaddrank(matchobject, cb) {
             async.forEachOf(matchobject[teamarray], function(value, j, callback) {
               request(urlgetrank + matchobject[teamarray][j].summonerid + "?api_key=" + lol_api, function(error, response, body) {
                 requesterror(urlgetrank + matchobject[teamarray][j].summonerid + "?api_key=" + lol_api, response.statusCode, function(err) {
-                  if(err) {
+                  if (err) {
                     cb(err);
                   } else {
                     var importedJSON = JSON.parse(body);
@@ -604,6 +630,7 @@ function livematchaddrank(matchobject, cb) {
                     if (loops1 == matchobject[teamarray].length) {
                       cb(false, matchobject);
                     }
+
                     callback();
                   }
                 });
@@ -841,7 +868,7 @@ function getrunestring(yourarray, matchobject, summonerobject, cb) {
   }
   request(urlrunes, function(error, response, body) {
     requesterror(urlrunes, response.statusCode, function(err) {
-      if(err) {
+      if (err) {
         cb(err);
       } else {
         var importedJSON = JSON.parse(body);
@@ -867,32 +894,33 @@ function getrunestring(yourarray, matchobject, summonerobject, cb) {
 function requesterror(url, response, cb) {
   if (response == 200) {
     cb(false);
-  } else if(response == 400) {
+  } else if (response == 400) {
     cb('400 bad request **' + url + '**');
-  } else if(response == 403) {
+  } else if (response == 403) {
     cb('403 Forbidden. Invalid api key **' + url + '**');
-  } else if(response == 404) {
+  } else if (response == 404) {
     cb('404 Not found **' + url + '**');
-  } else if(response == 415) {
+  } else if (response == 415) {
     cb('415 unsupported Media Type **' + url + '**');
-  } else if(response == 429) {
+  } else if (response == 429) {
     cb('429 Rate limit exceeded **' + url + '**');
-  } else if(response == 500) {
+  } else if (response == 500) {
     cb('500 internal server error **' + url + '**');
-  } else if(response == 503) {
+  } else if (response == 503) {
     cb('503 service unavailable **' + url + '**');
   }
 }
+
 function printskillorder(championggobject, cb) {
 
   var highskillwr = roundTo(championggobject.highskill.winrate * 100, 2);
   var winskillwr = roundTo(championggobject.winskill.winrate * 100, 2);
   var highskill = "Highest Play-Rate Skill Order: \n**" + championggobject.highskill.hash + "** (" + championggobject.highskill.count + " games, winrate: " + highskillwr + "%)";
-  var winskill = "Highest Win-Rate Skill Order: \n**" + championggobject.winskill.hash+ "** (" + championggobject.winskill.count + " games, winrate: " + winskillwr + "%)";
+  var winskill = "Highest Win-Rate Skill Order: \n**" + championggobject.winskill.hash + "** (" + championggobject.winskill.count + " games, winrate: " + winskillwr + "%)";
   var string = highskill + "\n" + winskill + "\n";
   request(urlmasteries, function(error, response, body) {
     requesterror(urlmasteries, response.statusCode, function(err) {
-      if(err) {
+      if (err) {
         cb(err);
       } else {
         var ferocitynum = 0;
@@ -906,53 +934,50 @@ function printskillorder(championggobject, cb) {
         var keystone = "";
         var found = false;
         var message = "";
-        for (var i = 0; i < mastery.length; i+= 2) {
+        for (var i = 0; i < mastery.length; i += 2) {
           found = false;
-          for (var a = 0; a < ferocityarray.length; a ++) {
-            if(!found) {
-              for(var b = 0; b < ferocityarray[a].length; b++) {
-                if(mastery[i] == ferocityarray[a][b].masteryId) {
-                  ferocitynum += parseInt(mastery[i+1]);
+          for (var a = 0; a < ferocityarray.length; a++) {
+            if (!found) {
+              for (var b = 0; b < ferocityarray[a].length; b++) {
+                if (mastery[i] == ferocityarray[a][b].masteryId) {
+                  ferocitynum += parseInt(mastery[i + 1]);
                   found = true;
                   break;
                 }
               }
-            }
-            else {
+            } else {
               break;
             }
           }
-          for (var c = 0; c < cunningarray.length; c ++) {
-            if(!found) {
-              for(var d = 0; d < cunningarray[c].length; d++) {
-                if(mastery[i] == cunningarray[c][d].masteryId) {
-                  cunningnum += parseInt(mastery[i+1]);
+          for (var c = 0; c < cunningarray.length; c++) {
+            if (!found) {
+              for (var d = 0; d < cunningarray[c].length; d++) {
+                if (mastery[i] == cunningarray[c][d].masteryId) {
+                  cunningnum += parseInt(mastery[i + 1]);
                   found = true;
                   break;
                 }
               }
-            }
-            else {
+            } else {
               break;
             }
           }
-          for (var e = 0; e < resolvearray.length; e ++) {
-            if(!found) {
-              for(var f = 0; f < resolvearray[e].length; f++) {
-                if(mastery[i] == resolvearray[e][f].masteryId) {
-                  resolvenum += parseInt(mastery[i+1]);
+          for (var e = 0; e < resolvearray.length; e++) {
+            if (!found) {
+              for (var f = 0; f < resolvearray[e].length; f++) {
+                if (mastery[i] == resolvearray[e][f].masteryId) {
+                  resolvenum += parseInt(mastery[i + 1]);
                   found = true;
                   break;
                 }
               }
-            }
-            else {
+            } else {
               break;
             }
           }
-          if(keystonemastery[mastery[i]] != undefined) {
-              keystone = keystonemastery[mastery[i]];
-            }
+          if (keystonemastery[mastery[i]] != undefined) {
+            keystone = keystonemastery[mastery[i]];
+          }
         }
         message = "Masteries: \n**" + ferocitynum + "-" + cunningnum + "-" + resolvenum + " **KEYSTONE: **" + keystone + "**";
         console.log(keystone);
@@ -987,9 +1012,9 @@ function printbuild(message, args, championggobject) {
   console.log(championggobject);
   printskillorder(championggobject, function(err, string) {
     console.log(string);
-    if(err) {
+    if (err) {
       message.channel.send(err);
-    }else {
+    } else {
       message.channel.send(string);
     }
   });
@@ -1043,12 +1068,17 @@ function matchmessage(message, matchobject, summonerobject) {
     }
 
   }
+  var insightmastery = "Enemy Players with Insight:";
+  for (var i = 0; i < matchobject[teamarray].length; i++) {
+    if(matchobject[teamarray][i].insight) {
+        insightmastery += " **" + matchobject[teamarray][i].summonername + " (" + matchobject[teamarray][i].championname + ")**,";
+    }
+  }
 
   getrunestring(yourarray, matchobject, summonerobject, function(err, runes) {
-    if(err) {
+    if (err) {
       message.channel.send(err);
-    }
-    else {
+    } else {
       message.channel.send({
         "embed": {
           "title": "Live Match Info for **" + summonerobject.name + "**",
@@ -1091,6 +1121,10 @@ function matchmessage(message, matchobject, summonerobject) {
             {
               "name": "Your Runes",
               "value": runes
+            },
+            {
+              "name": "Insight",
+              "value": insightmastery
             }
 
           ]
