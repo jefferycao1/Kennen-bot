@@ -1,12 +1,13 @@
 # Kennen-Bot
 A League of Legends Discord Bot
 
-Find info on a match you're in.
+Find info on a match you're in!
 
-![image](https://user-images.githubusercontent.com/22064652/31061833-fa77637a-a6f2-11e7-8801-8bf4c8d44103.png)
+![image](https://user-images.githubusercontent.com/22064652/31061887-54b49696-a6f3-11e7-836a-5130829f9b82.png)
 
 
-Find champion buidls from Champion.gg
+Find champion buidls from Champion.gg!
+
 
 
 
